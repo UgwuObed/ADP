@@ -27,7 +27,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registration successful',
-            'data' => new UserResource($user),
+            'user' => new UserResource($user),
             'access_token' => $token,
             // 'token_type' => 'Bearer',
         ], 201);
@@ -48,7 +48,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login successful',
-            'data' => new UserResource($user),
+            'user' => new UserResource($user),
             'access_token' => $token,
             // 'token_type' => 'Bearer',
         ]);

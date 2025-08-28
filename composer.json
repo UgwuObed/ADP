@@ -14,7 +14,7 @@
         "laravel/passport": "^12.3",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
-        "league/flysystem-aws-s3-v3": "^3.26",
+        "league/flysystem-aws-s3-v3": "3.0",
         "openai-php/client": "^0.10.1",
         "twilio/sdk": "^8.3",
         "unicodeveloper/laravel-paystack": "^1.2"
