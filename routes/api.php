@@ -3,8 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\Auth\AuthController;
-use App\Http\Controllers\Api\V1\KycController;
-use App\Http\Controllers\Api\V1\DocumentController;
+use App\Http\Controllers\API\V1\KycController;
+use App\Http\Controllers\API\V1\DocumentController;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
 use Laravel\Passport\Http\Controllers\AuthorizationController;
 
