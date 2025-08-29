@@ -25,4 +25,28 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed', 
     ];
+
+    public function getDisplayNameAttribute(): string
+    {
+        if (!empty($this->full_name)) {
+            return $this->full_name;
+        }
+
+        $emailPart = explode('@', $this->email)[0];
+        $cleanName = str_replace(['_', '.', '-', '+'], ' ', $emailPart);
+        return ucwords($cleanName);
+    }
+
+    public function getNameAttribute(): string
+    {
+        return $this->getDisplayNameAttribute();
+    }
+
+    /**
+     * kyc relationship
+     */
+    public function kycApplication()
+    {
+        return $this->hasOne(\App\Models\KycApplication::class);
+    }
 }
