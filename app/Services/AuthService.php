@@ -14,6 +14,8 @@ class AuthService
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,
             'password' => Hash::make($data['password']),
+            'role' => User::ROLE_SUPER_ADMIN, 
+            'is_active' => true,
         ]);
     }
 }

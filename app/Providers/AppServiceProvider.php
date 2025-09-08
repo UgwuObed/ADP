@@ -3,22 +3,19 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use OpenAI\Laravel\Facades\OpenAI;
-use App\Services\AIService;
-use OpenAI\Client as OpenAIClient;
-use OpenAI\Client;
+use App\Services\ProfileService;
+use App\Services\TeamService;
+
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
      */
-    public function register()
+    public function register(): void
     {
-        // // Register the AIService and inject the OpenAI client
-        // $this->app->singleton(AIService::class, function ($app) {
-        //     return new AIService(OpenAI::client());
-        // });
+        $this->app->singleton(ProfileService::class);
+        $this->app->singleton(TeamService::class);
     }
 
     /**

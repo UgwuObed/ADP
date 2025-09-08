@@ -37,26 +37,36 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function login(LoginRequest $request): JsonResponse
-    {
-        $credentials = $request->only('email', 'password');
+        public function login(LoginRequest $request): JsonResponse
+        {
+            $credentials = $request->only('email', 'password');
 
-        if (!auth()->attempt($credentials)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+            if (!auth()->attempt($credentials)) {
+                throw ValidationException::withMessages([
+                    'email' => ['The provided credentials are incorrect.'],
+                ]);
+            }
+
+            $user = auth()->user();
+            
+            if (!$user->is_active) {
+                auth()->logout();
+                throw ValidationException::withMessages([
+                    'email' => ['Your account has been deactivated. Please contact support.'],
+                ]);
+            }
+            
+            $user->updateLastLogin();
+            
+            $token = $user->createToken('auth-token')->accessToken;
+
+            return response()->json([
+                'message' => 'Login successful',
+                'user' => new UserResource($user),
+                'access_token' => $token,
             ]);
         }
 
-        $user = auth()->user();
-        $token = $user->createToken('auth-token')->accessToken;
-
-        return response()->json([
-            'message' => 'Login successful',
-            'user' => new UserResource($user),
-            'access_token' => $token,
-            // 'token_type' => 'Bearer',
-        ]);
-    }
 
     public function logout(Request $request): JsonResponse
     {
@@ -87,6 +97,9 @@ class AuthController extends Controller
 
      public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
+
+            \Log::info('forgotPassword method called', ['email' => $request->email]);
+
         $result = $this->passwordResetService->sendOtp($request->email);
 
         if (!$result['success']) {

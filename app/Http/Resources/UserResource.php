@@ -15,6 +15,18 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'email' => $this->email,
             'email_verified_at' => $this->email_verified_at,
+            'role' => $this->role,
+            'role_label' => ucwords(str_replace('_', ' ', $this->role)),
+            'is_active' => $this->is_active,
+            'last_login_at' => $this->last_login_at,
+            'created_by' => $this->created_by,
+            'creator' => $this->whenLoaded('creator', function () {
+                return [
+                    'id' => $this->creator->id,
+                    'full_name' => $this->creator->full_name,
+                    'role' => $this->creator->role,
+                ];
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
