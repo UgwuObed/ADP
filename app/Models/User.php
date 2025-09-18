@@ -54,7 +54,6 @@ class User extends Authenticatable
         return $this->hasOne(\App\Models\KycApplication::class);
     }
 
-
         const ROLE_SUPER_ADMIN = 'super_admin';
         const ROLE_ADMIN = 'admin';
         const ROLE_MANAGER = 'manager';
