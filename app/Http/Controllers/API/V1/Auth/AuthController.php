@@ -98,7 +98,6 @@ class AuthController extends Controller
      public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
 
-            \Log::info('forgotPassword method called', ['email' => $request->email]);
 
         $result = $this->passwordResetService->sendOtp($request->email);
 
@@ -136,4 +135,28 @@ class AuthController extends Controller
             'message' => $result['message']
         ]);
     }
+
+
+    public function resendOtp(Request $request): JsonResponse
+{
+    $request->validate([
+        'email' => 'required|email|exists:users,email',
+    ]);
+
+    $result = $this->passwordResetService->sendOtp($request->email);
+
+    if (!$result['success']) {
+        return response()->json([
+            'success' => false,
+            'message' => $result['message']
+        ], 400);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'A new OTP has been sent to your email address',
+        'token' => $result['token'],
+    ]);
+}
+
 }

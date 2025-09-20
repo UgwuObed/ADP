@@ -26,6 +26,19 @@ class PasswordResetService
                 ];
             }
 
+
+         $lastOtp = DB::table('password_reset_tokens')
+            ->where('email', $email)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($lastOtp && now()->diffInSeconds($lastOtp->created_at) < 60) {
+            return [
+                'success' => false,
+                'message' => 'Please wait at least 1 minute before requesting another OTP.'
+            ];
+        }
+
             $otp = PasswordResetToken::generateOtp(); 
             $token = PasswordResetToken::generateToken(); 
 

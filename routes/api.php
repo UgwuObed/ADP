@@ -24,6 +24,7 @@ Route::prefix('v1')->group(function () {
         Route::post('login', [AuthController::class, 'login']);
         Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('resend-otp', [AuthController::class, 'resendOtp']);
     });
 
     Route::middleware(['auth:api', 'active.user'])->group(function () {
@@ -43,7 +44,7 @@ Route::prefix('v1')->group(function () {
             Route::get('activity', [ProfileController::class, 'activity']);
         });
 
-        // team Management Routes (Super Admin Only)
+        // team Management Routes 
         Route::prefix('team')->group(function () {
             Route::get('/', [TeamController::class, 'index']);
             Route::post('/', [TeamController::class, 'store']);
