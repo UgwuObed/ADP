@@ -25,6 +25,8 @@ Route::prefix('v1')->group(function () {
         Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
         Route::post('resend-otp', [AuthController::class, 'resendOtp']);
+        Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
+
     });
 
     Route::middleware(['auth:api', 'active.user'])->group(function () {

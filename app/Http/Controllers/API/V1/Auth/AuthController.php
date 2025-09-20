@@ -159,4 +159,31 @@ class AuthController extends Controller
     ]);
 }
 
+public function verifyOtp(Request $request): JsonResponse
+{
+    $request->validate([
+        'token' => 'required|string',
+        'otp'   => 'required|string',
+    ]);
+
+    $result = $this->passwordResetService->verifyOtp(
+        $request->token,
+        $request->otp
+    );
+
+    if (!$result['success']) {
+        return response()->json([
+            'success' => false,
+            'message' => $result['message']
+        ], 400);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => $result['message'],
+        'email'   => $result['email']
+    ]);
+}
+
+
 }
