@@ -19,18 +19,8 @@ class CreateTeamMemberRequest extends FormRequest
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'required|string|max:20|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => [
-                'required',
-                'string',
-                Rule::in(['admin', 'manager', 'distributor'])
-            ],
-        ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'role.in' => 'The selected role is invalid. Valid roles are: admin, manager, distributor.',
+            'role_id' => 'required|exists:roles,id',
         ];
     }
 }
+

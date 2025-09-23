@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\Auth\AuthController;
 use App\Http\Controllers\API\V1\ProfileController;
 use App\Http\Controllers\API\V1\TeamController;
+use App\Http\Controllers\API\V1\RoleController;
 use App\Http\Controllers\API\V1\KycController;
 use App\Http\Controllers\API\V1\DocumentController;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
@@ -47,16 +48,22 @@ Route::prefix('v1')->group(function () {
         });
 
         // team Management Routes 
-        Route::prefix('team')->group(function () {
-            Route::get('/', [TeamController::class, 'index']);
-            Route::post('/', [TeamController::class, 'store']);
-            Route::get('roles', [TeamController::class, 'roles']);
-            Route::get('statistics', [TeamController::class, 'statistics']);
-            Route::get('{memberId}', [TeamController::class, 'show']);
-            Route::put('{memberId}', [TeamController::class, 'update']);
-            Route::post('{memberId}/deactivate', [TeamController::class, 'deactivate']);
-            Route::post('{memberId}/activate', [TeamController::class, 'activate']);
-        });
+            Route::prefix('team')->group(function () {
+                Route::get('/', [TeamController::class, 'index']);
+                Route::post('/', [TeamController::class, 'store']);
+                Route::get('statistics', [TeamController::class, 'statistics']);
+
+                // role management routes 
+                Route::get('roles', [RoleController::class, 'index']);
+                Route::post('roles', [RoleController::class, 'store']);
+                Route::put('roles/{roleId}', [RoleController::class, 'update']);
+                
+                Route::get('permissions', [RoleController::class, 'permissions']); 
+                Route::get('{memberId}', [TeamController::class, 'show']);
+                Route::put('{memberId}', [TeamController::class, 'update']);
+                Route::post('{memberId}/deactivate', [TeamController::class, 'deactivate']);
+                Route::post('{memberId}/activate', [TeamController::class, 'activate']);
+            });
 
         // KYC Routes
         Route::prefix('kyc')->group(function () {

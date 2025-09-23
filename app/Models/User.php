@@ -10,25 +10,46 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
     
     protected $fillable = [
-        'full_name', 'phone', 'email', 'password', 'role', 'is_active', 'created_by', 'last_login_at',
+        'full_name', 'phone', 'email', 'password', 'role_id', 'is_active', 'created_by', 'last_login_at',
     ];
 
     protected $hidden = [
         'password', 'remember_token',
     ];
 
-   protected $casts = [
+    protected $casts = [
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
     ];
+
+   
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function kycApplication()
+    {
+        return $this->hasOne(\App\Models\KycApplication::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function createdUsers(): HasMany
+    {
+        return $this->hasMany(User::class, 'created_by');
+    }
+
 
     public function getDisplayNameAttribute(): string
     {
@@ -46,18 +67,24 @@ class User extends Authenticatable
         return $this->getDisplayNameAttribute();
     }
 
-    /**
-     * kyc relationship
-     */
-    public function kycApplication()
+    public function getRoleAttribute(): string
     {
-        return $this->hasOne(\App\Models\KycApplication::class);
+        if ($this->role_id && $this->relationLoaded('role')) {
+            return $this->getRelationValue('role')->name;
+        }
+        
+        if ($this->role_id) {
+            return Role::find($this->role_id)->name ?? 'distributor';
+        }
+
+        return 'distributor';
     }
 
-        const ROLE_SUPER_ADMIN = 'super_admin';
-        const ROLE_ADMIN = 'admin';
-        const ROLE_MANAGER = 'manager';
-        const ROLE_DISTRIBUTOR = 'distributor';
+    
+    const ROLE_SUPER_ADMIN = 'super_admin';
+    const ROLE_ADMIN = 'admin';
+    const ROLE_MANAGER = 'manager';
+    const ROLE_DISTRIBUTOR = 'distributor';
 
     public static function getRoles(): array
     {
@@ -69,9 +96,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function hasRole(string $role): bool
+    public function hasRole(string $roleName): bool
     {
-        return $this->role === $role;
+        return $this->role === $roleName;
     }
 
     public function isSuperAdmin(): bool
@@ -94,29 +121,70 @@ class User extends Authenticatable
         return $this->hasRole(self::ROLE_DISTRIBUTOR);
     }
 
-    public function creator(): BelongsTo
+
+    public function hasPermission(string $permissionKey): bool
     {
-        return $this->belongsTo(User::class, 'created_by');
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($this->role_id && $this->relationLoaded('role')) {
+            return $this->getRelationValue('role')->hasPermission($permissionKey);
+        }
+        
+        if ($this->role_id) {
+            $role = Role::with('permissions')->find($this->role_id);
+            return $role ? $role->hasPermission($permissionKey) : false;
+        }
+
+        return false;
     }
 
-    public function createdUsers(): HasMany
+    public function hasAnyPermission(array $permissions): bool
     {
-        return $this->hasMany(User::class, 'created_by');
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
     }
+
+    public function hasAllPermissions(array $permissions): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        foreach ($permissions as $permission) {
+            if (!$this->hasPermission($permission)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeWithRole($query, string $role)
+    public function scopeWithRole($query, string $roleName)
     {
-        return $query->where('role', $role);
+        return $query->whereHas('role', function($q) use ($roleName) {
+            $q->where('name', $roleName);
+        });
     }
 
     public function updateLastLogin(): void
     {
         $this->update(['last_login_at' => now()]);
     }
-
 }
