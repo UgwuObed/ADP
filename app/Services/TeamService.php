@@ -178,9 +178,34 @@ public function getAvailableRoles(User $currentUser): array
         return $role->fresh('permissions');
     }
 
-    public function getAllPermissions(): Collection
+public function getAllPermissions(): array
+{
+    return Permission::orderBy('group')->orderBy('key')->get()
+        ->groupBy('group')
+        ->map(function ($permissions, $group) {
+            return [
+                'group_name' => $this->getGroupDisplayName($group),
+                'permissions' => $permissions->map(function ($perm) {
+                    return [
+                        'key' => $perm->key,
+                        'description' => $perm->description
+                    ];
+                })->toArray()
+            ];
+        })
+        ->toArray();
+}
+
+    private function getGroupDisplayName(string $groupKey): string
     {
-        return Permission::orderBy('group')->orderBy('key')->get();
+        $groupNames = [
+            'wallet_management' => 'Wallet Management',
+            'airtime_orders' => 'Airtime Orders & Bundles', 
+            'team_management' => 'Team Management',
+            'reports' => 'Reports & Usage'
+        ];
+        
+        return $groupNames[$groupKey] ?? ucwords(str_replace('_', ' ', $groupKey));
     }
 
     public function getPermissionGroups(): array
