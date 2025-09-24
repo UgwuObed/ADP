@@ -102,11 +102,47 @@ class ZeptoMailService
             'user_name' => $name,
             'app_name' => config('app.name'),
             'current_year' => date('Y'),
-            'support_email' => config('services.zeptomail.support_email', 'support@yourdomain.com'),
+            'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
         ];
 
         $result = $this->sendEmail($templateKey, $email, $name, $mergeData);
         
         return $result['success'];
     }
+
+    public function sendTeamInvitationEmail(string $email, string $inviterName, string $otp, string $token): bool
+{
+    $templateKey = config('services.zeptomail.team_invitation_template_key');
+    
+    $mergeData = [
+        'inviter_name' => $inviterName,
+        'otp_code' => $otp,
+        'invitation_url' => config('app.frontend_url') . '/complete-registration?token=' . $token . '&otp=' . $otp,
+        'expiry_days' => 7,
+        'app_name' => config('app.name'),
+        'current_year' => date('Y'),
+    ];
+
+    $result = $this->sendEmail($templateKey, $email, 'New Team Member', $mergeData);
+    
+    return $result['success'];
+}
+
+public function sendWelcomeEmail(string $email, string $userName): bool
+{
+    $templateKey = config('services.zeptomail.welcome_template_key');
+    
+    $mergeData = [
+        'user_name' => $userName,
+        'login_url' => config('app.frontend_url') . '/login',
+        'app_name' => config('app.name'),
+        'current_year' => date('Y'),
+        'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
+    ];
+
+    $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
+    
+    return $result['success'];
+}
+
 }

@@ -41,6 +41,8 @@ return [
         'sender_name' => env('ZEPTO_MAIL_SENDER_NAME'),
         'otp_template_key' => env('ZEPTO_MAIL_OTP_TEMPLATE_KEY'),
         'password_success_template_key' => env('ZEPTO_MAIL_PASSWORD_SUCCESS_TEMPLATE_KEY'),
+        'team_invitation_template_key' => env('ZEPTOMAIL_TEAM_INVITATION_TEMPLATE_KEY', 'team_invitation'),
+        'welcome_template_key' => env('ZEPTOMAIL_WELCOME_TEMPLATE_KEY', 'welcome'),
         'support_email' => env('SUPPORT_EMAIL', 'support@adp.com'),
     ],
 

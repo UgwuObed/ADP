@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Team\CreateTeamMemberRequest;
 use App\Http\Requests\Team\UpdateTeamMemberRequest;
+use App\Http\Requests\Team\CompleteTeamRegistrationRequest;
 use App\Http\Resources\UserResource;
 use App\Services\TeamService;
 use Illuminate\Http\JsonResponse;
@@ -33,21 +34,56 @@ class TeamController extends Controller
         ]);
     }
 
-    /**
-     * Create a new team member
-     */
-    public function store(CreateTeamMemberRequest $request): JsonResponse
+
+        public function store(CreateTeamMemberRequest $request): JsonResponse
     {
-        $member = $this->teamService->createTeamMember(
+        $result = $this->teamService->sendTeamInvitation(
             $request->validated(),
             $request->user()
         );
 
+        $statusCode = $result['success'] ? 201 : 422;
+
         return response()->json([
-            'success' => true,
-            'message' => 'Team member created successfully',
-            'data' => new UserResource($member)
-        ], 201);
+            'success' => $result['success'],
+            'message' => $result['message'],
+            'data' => $result['data'] ?? null
+        ], $statusCode);
+    }
+
+
+    public function verifyInvitation(Request $request): JsonResponse
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'otp' => 'required|string|size:6'
+        ]);
+
+        $result = $this->teamService->verifyInvitation(
+            $request->token,
+            $request->otp
+        );
+
+        $statusCode = $result['success'] ? 200 : 422;
+
+        return response()->json($result, $statusCode);
+    }
+
+    public function completeRegistration(CompleteTeamRegistrationRequest $request): JsonResponse
+    {
+        $result = $this->teamService->completeRegistration(
+            $request->validated(),
+            $request->token,
+            $request->otp
+        );
+
+        $statusCode = $result['success'] ? 201 : 422;
+
+        return response()->json([
+            'success' => $result['success'],
+            'message' => $result['message'],
+            'data' => isset($result['data']) ? new UserResource($result['data']) : null
+        ], $statusCode);
     }
 
     /**

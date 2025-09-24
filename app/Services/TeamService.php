@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Hash;
 
 class TeamService
 {
+
+ public function __construct(
+    private TeamInvitationService $teamInvitationService
+) {}
+
 public function getTeamMembers(User $currentUser): Collection
 {
     return User::where('created_by', $currentUser->id)
@@ -211,6 +216,21 @@ public function getAllPermissions(): array
     public function getPermissionGroups(): array
     {
         return Permission::distinct()->pluck('group')->toArray();
+    }
+
+        public function sendTeamInvitation(array $data, User $inviter): array
+    {
+        return $this->teamInvitationService->sendTeamInvitation($data, $inviter);
+    }
+
+    public function verifyInvitation(string $token, string $otp): array
+    {
+        return $this->teamInvitationService->verifyInvitation($token, $otp);
+    }
+
+    public function completeRegistration(array $data, string $token, string $otp): array
+    {
+        return $this->teamInvitationService->completeRegistration($data, $token, $otp);
     }
 
 }

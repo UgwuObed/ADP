@@ -140,7 +140,7 @@ class PasswordResetService
                     'updated_at' => now()
                 ]);
 
-            \Log::info('Password updated successfully', ['email' => $user->email]);
+            // \Log::info('Password updated successfully', ['email' => $user->email]);
 
             $userName = $user->full_name ?? ucfirst(explode('@', $user->email)[0]);
             $this->zeptoMailService->sendPasswordResetSuccessEmail($user->email, $userName);

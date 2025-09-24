@@ -211,7 +211,7 @@ class KycService
             return 'signature';
         }
         
-        return null; // Application complete
+        return null; 
     }
 
     private function generateFileName(UploadedFile $file, string $type): string
