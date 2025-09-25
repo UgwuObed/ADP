@@ -13,12 +13,34 @@ class TeamService
     private TeamInvitationService $teamInvitationService
 ) {}
 
-public function getTeamMembers(User $currentUser): Collection
+public function getTeamMembers(User $currentUser, array $filters = []): Collection
 {
-    return User::where('created_by', $currentUser->id)
-              ->with('role') 
-              ->orderBy('created_at', 'desc')
-              ->get();
+    $query = User::where('created_by', $currentUser->id)
+                ->with('role');
+
+    
+    if (!empty($filters['role_id'])) {
+        $query->where('role_id', $filters['role_id']);
+    }
+
+    if (isset($filters['status']) && $filters['status'] !== 'all') {
+        if ($filters['status'] === 'active') {
+            $query->where('is_active', true);
+        } elseif ($filters['status'] === 'inactive') {
+            $query->where('is_active', false);
+        }
+    }
+
+    if (!empty($filters['search'])) {
+        $searchTerm = '%' . $filters['search'] . '%';
+        $query->where(function($q) use ($searchTerm) {
+            $q->where('full_name', 'LIKE', $searchTerm)
+              ->orWhere('email', 'LIKE', $searchTerm)
+              ->orWhere('phone', 'LIKE', $searchTerm);
+        });
+    }
+
+    return $query->orderBy('created_at', 'desc')->get();
 }
 
     public function createTeamMember(array $data, User $creator): User
@@ -38,6 +60,7 @@ public function getTeamMembers(User $currentUser): Collection
     {
         return User::where('id', $memberId)
                   ->where('created_by', $currentUser->id)
+                  ->with(['role.permissions'])
                   ->first();
     }
 
@@ -94,9 +117,32 @@ public function updateTeamMember(int $memberId, array $data, User $currentUser):
         return true;
     }
 
+// public function getAvailableRoles(User $currentUser): array
+// {
+
+//     $roles = Role::where(function($query) use ($currentUser) {
+//             $query->where('created_by', $currentUser->id)
+//                   ->orWhere('is_system_role', true);
+//         })
+//         ->with('permissions')
+//         ->orderBy('is_system_role', 'desc') 
+//         ->orderBy('name')
+//         ->get();
+
+//     return $roles->map(function($role) {
+//         return [
+//             'id' => $role->id,
+//             'name' => $role->name,
+//             'description' => $role->description,
+//             'permissions' => $role->permissions->pluck('key')->toArray(),
+//             'is_system_role' => $role->is_system_role,
+//             'label' => ucwords(str_replace('_', ' ', $role->name))
+//         ];
+//     })->toArray();
+// }
+
 public function getAvailableRoles(User $currentUser): array
 {
-
     $roles = Role::where(function($query) use ($currentUser) {
             $query->where('created_by', $currentUser->id)
                   ->orWhere('is_system_role', true);
@@ -106,17 +152,37 @@ public function getAvailableRoles(User $currentUser): array
         ->orderBy('name')
         ->get();
 
-    return $roles->map(function($role) {
+  
+    $userStats = User::where('created_by', $currentUser->id)
+        ->whereIn('role_id', $roles->pluck('id'))
+        ->selectRaw('role_id, 
+                     COUNT(*) as total_users,
+                     SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active_users,
+                     SUM(CASE WHEN is_active = false THEN 1 ELSE 0 END) as inactive_users')
+        ->groupBy('role_id')
+        ->get()
+        ->keyBy('role_id');
+
+    return $roles->map(function($role) use ($userStats) {
+        $stats = $userStats->get($role->id);
+        
         return [
             'id' => $role->id,
             'name' => $role->name,
             'description' => $role->description,
             'permissions' => $role->permissions->pluck('key')->toArray(),
+            'permissions_count' => $role->permissions->count(),
+            'users_count' => $stats ? $stats->total_users : 0,
+            'active_users_count' => $stats ? $stats->active_users : 0,
+            'inactive_users_count' => $stats ? $stats->inactive_users : 0,
             'is_system_role' => $role->is_system_role,
-            'label' => ucwords(str_replace('_', ' ', $role->name))
+            'label' => ucwords(str_replace('_', ' ', $role->name)),
+            'can_edit' => !$role->is_system_role, 
+            'can_delete' => !$role->is_system_role && ($stats ? $stats->total_users == 0 : true)
         ];
     })->toArray();
 }
+
 
    public function getTeamStatistics(User $currentUser): array
 {

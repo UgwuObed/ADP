@@ -28,6 +28,15 @@ Route::prefix('v1')->group(function () {
         Route::post('resend-otp', [AuthController::class, 'resendOtp']);
         Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 
+        // team
+        Route::post('team/verify', [TeamController::class, 'verifyInvitation']);
+        Route::post('team/join', [TeamController::class, 'completeRegistration']);
+
+    });
+
+    Route::prefix('team')->group(function () {
+        Route::post('/verify', [TeamController::class, 'verifyInvitation']);
+        Route::post('/join', [TeamController::class, 'completeRegistration']);
     });
 
     Route::middleware(['auth:api', 'active.user'])->group(function () {
@@ -50,12 +59,8 @@ Route::prefix('v1')->group(function () {
         // team Management Routes 
             Route::prefix('team')->group(function () {
                 Route::get('/', [TeamController::class, 'index']);
-                // Route::post('/', [TeamController::class, 'store']);
                 Route::get('statistics', [TeamController::class, 'statistics']);
                 Route::post('/invite', [TeamController::class, 'store']);
-                Route::post('/verify', [TeamController::class, 'verifyInvitation']);
-                Route::post('/join', [TeamController::class, 'completeRegistration']);
-
                 // role management routes 
                 Route::get('roles', [RoleController::class, 'index']);
                 Route::post('roles', [RoleController::class, 'store']);

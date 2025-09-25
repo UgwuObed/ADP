@@ -29,6 +29,17 @@ class UserResource extends JsonResource
             }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'role_details' => $this->getRelationValue('role') ? [
+            'id' => $this->getRelationValue('role')->id,
+            'name' => $this->getRelationValue('role')->name,
+            'description' => $this->getRelationValue('role')->description,
+            'permissions' => $this->getRelationValue('role')->permissions->map(function($permission) {
+                return [
+                    'key' => $permission->key,
+                    'description' => $permission->description
+                ];
+            })
+        ] : null
         ];
     }
 }

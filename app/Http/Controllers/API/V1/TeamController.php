@@ -23,7 +23,14 @@ class TeamController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $members = $this->teamService->getTeamMembers($request->user());
+
+    $filters = [
+        'role_id' => $request->get('role_id'),
+        'search' => $request->get('search'),
+        'status' => $request->get('status'),
+    ];
+
+       $members = $this->teamService->getTeamMembers($request->user(), $filters);
 
         return response()->json([
             'success' => true,
@@ -35,7 +42,7 @@ class TeamController extends Controller
     }
 
 
-        public function store(CreateTeamMemberRequest $request): JsonResponse
+public function store(CreateTeamMemberRequest $request): JsonResponse
     {
         $result = $this->teamService->sendTeamInvitation(
             $request->validated(),
