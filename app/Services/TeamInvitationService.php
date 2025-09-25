@@ -91,45 +91,53 @@ class TeamInvitationService
         }
     }
 
-    public function verifyInvitation(string $token, string $otp): array
-    {
-        try {
-            $invitations = DB::table('team_invitations')
-                ->where('expires_at', '>', now())
-                ->where('is_used', false)
-                ->get();
+  public function verifyInvitation(string $token, string $otp): array
+{
+    try {
+        $invitations = DB::table('team_invitations')
+            ->join('users', 'team_invitations.invited_by', '=', 'users.id')
+            ->join('roles', 'team_invitations.role_id', '=', 'roles.id')
+            ->where('team_invitations.expires_at', '>', now())
+            ->where('team_invitations.is_used', false)
+            ->select(
+                'team_invitations.*',
+                'users.full_name as inviter_name',
+                'roles.name as role_name' 
+            )
+            ->get();
 
-            foreach ($invitations as $invitation) {
-                if (Hash::check($token, $invitation->token) && $invitation->otp === $otp) {
-                    return [
-                        'success' => true,
-                        'message' => 'Invitation verified successfully',
-                        'data' => [
-                            'email' => $invitation->email,
-                            'role_id' => $invitation->role_id,
-                            'invited_by' => $invitation->invited_by
-                        ]
-                    ];
-                }
+        foreach ($invitations as $invitation) {
+            if (Hash::check($token, $invitation->token) && $invitation->otp === $otp) {
+                return [
+                    'success' => true,
+                    'message' => 'Invitation verified successfully',
+                    'data' => [
+                        'email' => $invitation->email,
+                        'role_id' => $invitation->role_id,
+                        'role' => $invitation->role_name, 
+                        'invited_by_id' => $invitation->invited_by,
+                        'invited_by' => $invitation->inviter_name
+                    ]
+                ];
             }
-
-            return [
-                'success' => false,
-                'message' => 'Invalid or expired invitation'
-            ];
-
-        } catch (\Exception $e) {
-            \Log::error('Invitation verification failed', [
-                'error' => $e->getMessage()
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Failed to verify invitation'
-            ];
         }
-    }
 
+        return [
+            'success' => false,
+            'message' => 'Invalid or expired invitation'
+        ];
+
+    } catch (\Exception $e) {
+        \Log::error('Invitation verification failed', [
+            'error' => $e->getMessage()
+        ]);
+
+        return [
+            'success' => false,
+            'message' => 'Failed to verify invitation'
+        ];
+    }
+}
     public function completeRegistration(array $data, string $token, string $otp): array
     {
         try {

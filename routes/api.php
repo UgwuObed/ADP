@@ -52,7 +52,6 @@ Route::prefix('v1')->group(function () {
                 Route::get('/', [TeamController::class, 'index']);
                 // Route::post('/', [TeamController::class, 'store']);
                 Route::get('statistics', [TeamController::class, 'statistics']);
-
                 Route::post('/invite', [TeamController::class, 'store']);
                 Route::post('/verify', [TeamController::class, 'verifyInvitation']);
                 Route::post('/join', [TeamController::class, 'completeRegistration']);
