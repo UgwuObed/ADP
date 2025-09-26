@@ -154,7 +154,7 @@ class TeamInvitationService
                 'phone' => $data['phone'],
                 'password' => Hash::make($data['password']),
                 'role_id' => $invitationData['role_id'],
-                'created_by' => $invitationData['invited_by'],
+                'created_by' => $invitationData['invited_by_id'],
                 'is_active' => true,
             ]);
 
