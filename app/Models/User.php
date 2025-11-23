@@ -187,4 +187,63 @@ class User extends Authenticatable
     {
         $this->update(['last_login_at' => now()]);
     }
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function vtuTransactions(): HasMany
+    {
+        return $this->hasMany(\App\Models\VtuTransaction::class);
+    }
+
+    public function distributorPricing(): HasMany
+    {
+        return $this->hasMany(\App\Models\DistributorPricing::class);
+    }
+
+    public function stocks(): HasMany
+{
+    return $this->hasMany(DistributorStock::class);
+}
+
+public function stockPurchases(): HasMany
+{
+    return $this->hasMany(StockPurchase::class);
+}
+
+public function airtimeSales(): HasMany
+{
+    return $this->hasMany(AirtimeSale::class);
+}
+
+public function sellAirtime(): HasMany
+{
+    return $this->hasMany(SellAirtime::class);
+}
+
+public function dataSales(): HasMany
+{
+    return $this->hasMany(DataSale::class);
+}
+
+public function getStockBalance(string $network, string $type = 'airtime'): float
+{
+    $stock = $this->stocks()
+        ->where('network', strtolower($network))
+        ->where('type', $type)
+        ->first();
+    
+    return $stock?->balance ?? 0;
+}
+
+public function getOrCreateStock(string $network, string $type = 'airtime'): DistributorStock
+{
+    return $this->stocks()->firstOrCreate(
+        ['network' => strtolower($network), 'type' => $type],
+        ['balance' => 0, 'total_purchased' => 0, 'total_sold' => 0, 'is_active' => true]
+    );
+}
+
 }

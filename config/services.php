@@ -46,5 +46,26 @@ return [
         'support_email' => env('SUPPORT_EMAIL', 'support@adp.com'),
     ],
 
+    // 'vfd' => [
+    //   //  'base_url' => env('VFD_BASE_URL', 'https://api-apps.vfdbank.systems/vtech-wallet/api/v2/wallet2'),
+    //     'base_url' => env('VFD_BASE_URL', 'https://api-devapps.vfdbank.systems/vtech-wallet/api/v2/wallet2'),
+    //     'access_token' => env('VFD_ACCESS_TOKEN'),
+    // ],
+
+    'vfd' => [
+        'access_token' => env('VFD_ACCESS_TOKEN'),
+        'base_url' => env('VFD_BASE_URL', 'https://api-devapps.vfdbank.systems/vtech-wallet/api/v2/wallet2'),
+    ],
+
+    'vtu' => [
+        'base_url' => env('VTU_BASE_URL'),
+        'api_key' => env('VTU_API_KEY'),
+     ],
+
+    'topupbox' => [
+        'base_url' => env('TOPUPBOX_BASE_URL', 'https://api.topupbox.com'),
+        'access_token' => env('TOPUPBOX_ACCESS_TOKEN'),
+      ],
+
 
 ];
