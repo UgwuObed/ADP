@@ -27,6 +27,9 @@ use App\Http\Controllers\API\V1\Admin\AdminUserController;
 use App\Http\Controllers\API\V1\Admin\AdminTransactionController;
 use App\Http\Controllers\API\V1\Admin\AdminAuditLogController;
 use App\Http\Controllers\API\V1\Admin\AdminKycController;
+use App\Http\Controllers\API\V1\Admin\AdminWalletController;
+
+
 
 Route::group(['prefix' => '/oauth'], function () {
     Route::post('token', [AccessTokenController::class, 'issue']);
@@ -240,6 +243,25 @@ Route::prefix('v1/admin')->group(function () {
             Route::post('/{id}/trigger-verification', [AdminKycController::class, 'triggerAutomatedVerification']);
             Route::post('/bulk-action', [AdminKycController::class, 'bulkAction']);
         });
+
+        // Wallet Management
+        Route::prefix('wallets')->group(function () {
+            Route::get('/', [AdminWalletController::class, 'index']);
+            Route::get('/statistics', [AdminWalletController::class, 'statistics']);
+            Route::get('/fee-statistics', [AdminWalletController::class, 'feeStatistics']);
+            Route::get('/withdrawal-statistics', [AdminWalletController::class, 'withdrawalStatistics']);
+            Route::get('/{id}', [AdminWalletController::class, 'show']);
+            Route::get('/settings/global', [AdminWalletController::class, 'getGlobalSettings']);
+            Route::get('/{walletId}/settings', [AdminWalletController::class, 'getWalletSettings']);
+            Route::put('/{walletId}/settings', [AdminWalletController::class, 'updateWalletSettings']);
+            Route::post('/{walletId}/settings/reset', [AdminWalletController::class, 'resetToGlobalSettings']);
+            Route::post('/{id}/freeze', [AdminWalletController::class, 'freeze']);
+            Route::post('/{id}/unfreeze', [AdminWalletController::class, 'unfreeze']);
+            Route::post('/{id}/mark-suspicious', [AdminWalletController::class, 'markSuspicious']);
+            Route::post('/{id}/clear-suspicious', [AdminWalletController::class, 'clearSuspicious']);
+            Route::post('/bulk-freeze', [AdminWalletController::class, 'bulkFreeze']);
+            Route::post('/bulk-unfreeze', [AdminWalletController::class, 'bulkUnfreeze']);
+        });
     });
 
  
@@ -252,7 +274,10 @@ Route::prefix('v1/admin')->group(function () {
 
         Route::prefix('kyc')->group(function () {
             Route::put('/config/settings', [AdminKycController::class, 'updateSettings']);
+        });
 
+        Route::prefix('wallets')->group(function () {
+            Route::put('/settings/global', [AdminWalletController::class, 'updateGlobalSettings']);
         });
 
         // Create admin users
