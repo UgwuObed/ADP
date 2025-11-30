@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Wallet\CreateWalletRequest;
 use App\Http\Resources\WalletResource;
 use App\Services\WalletService;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -30,6 +31,8 @@ class WalletController extends Controller
             ], 422);
         }
 
+        AuditLogService::logWalletCreation($user, $wallet);
+        
         return response()->json([
             'message' => 'Wallet created successfully',
             'wallet' => new WalletResource($wallet)
@@ -64,6 +67,7 @@ class WalletController extends Controller
                 'message' => 'No wallet found to deactivate'
             ], 404);
         }
+
 
         return response()->json([
             'message' => 'Wallet deactivated successfully'

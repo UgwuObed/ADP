@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Providers;
+
 use Laravel\Passport\Passport;
 use Illuminate\Support\Facades\Gate;
 use App\Policies\UserPolicy;
@@ -15,11 +16,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        // 'App\Model' => 'App\Policies\ModelPolicy',
-        // 'Models\User' => 'App\Policies\UserPolicy',
         User::class => UserPolicy::class,
     ];
-
 
     /**
      * Register any authentication / authorization services.
@@ -28,5 +26,19 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
+      
+        Passport::tokensCan([
+            'admin' => 'Admin Access',
+            'user' => 'User Access',
+            'super_admin' => 'Super Admin Access',
+            'manager' => 'Manager Access',
+        ]);
+
+        Passport::setDefaultScope([
+            'user',
+        ]);
+
+        // Passport routes if needed
+        // Passport::routes();
     }
 }

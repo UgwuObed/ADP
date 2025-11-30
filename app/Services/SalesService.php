@@ -7,6 +7,7 @@ use App\Models\DistributorStock;
 use App\Models\AirtimeSale;
 use App\Models\DataSale;
 use App\Models\DataPlan;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -101,6 +102,8 @@ class SalesService
                     'completed_at' => now(),
                 ]);
 
+                AuditLogService::logAirtimeSale($user, $sale);
+
                 Log::info('Airtime sold successfully', [
                     'user_id' => $user->id,
                     'reference' => $reference,
@@ -136,6 +139,8 @@ class SalesService
                     'reference' => $reference,
                     'error' => $apiResult['message'],
                 ]);
+
+                AuditLogService::logAirtimeSaleFailed($user, $sale);
 
                 return [
                     'success' => false,

@@ -11,6 +11,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\PasswordResetService;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -42,6 +43,7 @@ class AuthController extends Controller
             $credentials = $request->only('email', 'password');
 
             if (!auth()->attempt($credentials)) {
+                AuditLogService::logFailedLogin($request->email);
                 throw ValidationException::withMessages([
                     'email' => ['The provided credentials are incorrect.'],
                 ]);
@@ -58,6 +60,8 @@ class AuthController extends Controller
             
             $user->updateLastLogin();
             
+            AuditLogService::logLogin($user);
+
             $token = $user->createToken('auth-token')->accessToken;
 
             return response()->json([
@@ -70,6 +74,8 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        AuditLogService::logLogout($request->user());
+        
         $request->user()->token()->revoke();
 
         return response()->json([

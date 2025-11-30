@@ -8,6 +8,7 @@ use App\Models\DistributorStock;
 use App\Models\StockPurchase;
 use App\Models\WalletTransaction;
 use App\Models\CommissionSetting;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -142,6 +143,8 @@ class StockService
                 'status' => 'success',
             ]);
 
+            AuditLogService::logStockPurchase($user, $purchase);
+            
             Log::info('Stock purchased', [
                 'user_id' => $user->id,
                 'reference' => $reference,

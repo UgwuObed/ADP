@@ -188,6 +188,11 @@ class User extends Authenticatable
         $this->update(['last_login_at' => now()]);
     }
 
+        public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
     public function wallet()
     {
         return $this->hasOne(Wallet::class);

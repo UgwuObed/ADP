@@ -21,6 +21,11 @@ use App\Http\Controllers\API\V1\AirtimeStockController;
 use App\Http\Controllers\API\V1\AirtimeDistributionController;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
 use Laravel\Passport\Http\Controllers\AuthorizationController;
+use App\Http\Controllers\API\V1\Admin\AdminAuthController;
+use App\Http\Controllers\API\V1\Admin\AdminDashboardController;
+use App\Http\Controllers\API\V1\Admin\AdminUserController;
+use App\Http\Controllers\API\V1\Admin\AdminTransactionController;
+use App\Http\Controllers\API\V1\Admin\AdminAuditLogController;
 
 Route::group(['prefix' => '/oauth'], function () {
     Route::post('token', [AccessTokenController::class, 'issue']);
@@ -154,5 +159,78 @@ Route::prefix('v1')->group(function () {
             Route::get('stats', [SalesController::class, 'stats']);
         });
 
+    });
+});
+
+
+Route::prefix('v1/admin')->group(function () {
+    
+    Route::post('login', [AdminAuthController::class, 'login']);
+
+    Route::middleware(['auth:api', 'admin'])->group(function () {
+        
+        Route::get('me', [AdminAuthController::class, 'me']);
+        Route::post('logout', [AdminAuthController::class, 'logout']);
+        Route::post('refresh', [AdminAuthController::class, 'refresh']);
+
+        Route::prefix('dashboard')->group(function () {
+            Route::get('overview', [AdminDashboardController::class, 'overview']);
+            Route::get('sales-chart', [AdminDashboardController::class, 'salesChart']);
+        });
+
+        // Users Management
+        Route::prefix('users')->group(function () {
+            Route::get('/', [AdminUserController::class, 'index']);
+            Route::get('/{id}', [AdminUserController::class, 'show']);
+            Route::put('/{id}', [AdminUserController::class, 'update']);
+            Route::post('/{id}/activate', [AdminUserController::class, 'activate']);
+            Route::post('/{id}/deactivate', [AdminUserController::class, 'deactivate']);
+            Route::delete('/{id}', [AdminUserController::class, 'destroy']);
+            
+            // User's transactions
+            Route::get('/{id}/transactions', [AdminUserController::class, 'transactions']);
+            Route::get('/{id}/stock', [AdminUserController::class, 'stock']);
+            Route::get('/{id}/wallet', [AdminUserController::class, 'wallet']);
+        });
+
+        // Transactions Management
+        Route::prefix('transactions')->group(function () {
+            Route::get('airtime', [AdminTransactionController::class, 'airtime']);
+            Route::get('data', [AdminTransactionController::class, 'data']);
+            Route::get('stock-purchases', [AdminTransactionController::class, 'stockPurchases']);
+            Route::get('wallet', [AdminTransactionController::class, 'wallet']);
+            
+            // Single transaction details
+            Route::get('airtime/{reference}', [AdminTransactionController::class, 'airtimeDetails']);
+            Route::get('data/{reference}', [AdminTransactionController::class, 'dataDetails']);
+        });
+
+        // Reports
+        Route::prefix('reports')->group(function () {
+            Route::get('sales-summary', [AdminDashboardController::class, 'salesSummary']);
+            Route::get('revenue-summary', [AdminDashboardController::class, 'revenueSummary']);
+            Route::get('export', [AdminDashboardController::class, 'exportReport']);
+        });
+
+        Route::prefix('audit-logs')->group(function () {
+            Route::get('/', [AdminAuditLogController::class, 'index']);
+            Route::get('/stats', [AdminAuditLogController::class, 'stats']);
+            Route::get('/critical', [AdminAuditLogController::class, 'critical']);
+            Route::get('/export', [AdminAuditLogController::class, 'export']);
+            Route::get('/user/{userId}', [AdminAuditLogController::class, 'userLogs']);
+            Route::get('/{id}', [AdminAuditLogController::class, 'show']);
+        });
+    });
+
+ 
+    Route::middleware(['auth:api', 'super_admin'])->group(function () {
+        // Settings
+        Route::prefix('settings')->group(function () {
+            Route::get('commission', [AdminSettingsController::class, 'getCommission']);
+            Route::put('commission', [AdminSettingsController::class, 'updateCommission']);
+        });
+
+        // Create admin users
+        Route::post('users/create-admin', [AdminUserController::class, 'createAdmin']);
     });
 });

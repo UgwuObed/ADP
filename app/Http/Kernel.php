@@ -76,5 +76,7 @@ class Kernel extends HttpKernel
         'admin.auth' => \App\Http\Middleware\AdminAuthorization::class,
         'kyc.step' => \App\Http\Middleware\ValidateKycStep::class,
         'active.user' => \App\Http\Middleware\CheckActiveUser::class,
+        'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+        'super_admin' => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
     ];
 }
