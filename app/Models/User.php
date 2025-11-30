@@ -233,6 +233,21 @@ public function dataSales(): HasMany
     return $this->hasMany(DataSale::class);
 }
 
+public function submittedTickets(): HasMany
+{
+    return $this->hasMany(SupportTicket::class, 'submitted_by');
+}
+
+public function assignedTickets(): HasMany
+{
+    return $this->hasMany(SupportTicket::class, 'assigned_to');
+}
+
+public function ticketMessages(): HasMany
+{
+    return $this->hasMany(TicketMessage::class);
+}
+
 public function getStockBalance(string $network, string $type = 'airtime'): float
 {
     $stock = $this->stocks()

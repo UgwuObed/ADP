@@ -28,6 +28,8 @@ use App\Http\Controllers\API\V1\Admin\AdminTransactionController;
 use App\Http\Controllers\API\V1\Admin\AdminAuditLogController;
 use App\Http\Controllers\API\V1\Admin\AdminKycController;
 use App\Http\Controllers\API\V1\Admin\AdminWalletController;
+use App\Http\Controllers\API\V1\CustomerTicketController;
+use App\Http\Controllers\API\V1\TicketController;
 
 
 
@@ -161,6 +163,28 @@ Route::prefix('v1')->group(function () {
             Route::get('airtime', [SalesController::class, 'airtimeSales']);
             Route::get('data', [SalesController::class, 'dataSales']);
             Route::get('stats', [SalesController::class, 'stats']);
+        });
+
+        Route::prefix('tickets')->name('tickets.')->group(function () {
+            Route::get('/', [CustomerTicketController::class, 'index'])->name('index');
+            Route::post('/', [CustomerTicketController::class, 'create'])->name('create');
+            Route::get('/pending', [CustomerTicketController::class, 'pending'])->name('pending');
+            Route::get('/resolved', [CustomerTicketController::class, 'resolved'])->name('resolved');
+            Route::get('/statistics', [CustomerTicketController::class, 'statistics'])->name('statistics');
+            Route::get('/{ticketId}', [CustomerTicketController::class, 'show'])->name('show');
+            Route::post('/{ticketId}/messages', [CustomerTicketController::class, 'addMessage'])->name('addMessage');
+            Route::post('/{ticketId}/rate', [CustomerTicketController::class, 'rateTicket'])->name('rate');
+        });
+
+        Route::prefix('distributor/tickets')->name('distributor.tickets.')->group(function () {
+            Route::get('/', [TicketController::class, 'index'])->name('index');
+            Route::get('/pending', [TicketController::class, 'pending'])->name('pending');
+            Route::get('/statistics', [TicketController::class, 'statistics'])->name('statistics');
+            Route::get('/{ticketId}', [TicketController::class, 'show'])->name('show');
+            Route::patch('/{ticketId}/status', [TicketController::class, 'updateStatus'])->name('updateStatus');
+            Route::post('/{ticketId}/approve', [TicketController::class, 'approve'])->name('approve');
+            Route::post('/{ticketId}/reject', [TicketController::class, 'reject'])->name('reject');
+            Route::post('/{ticketId}/messages', [TicketController::class, 'addMessage'])->name('addMessage');
         });
 
     });
