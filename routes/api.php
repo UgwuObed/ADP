@@ -26,6 +26,7 @@ use App\Http\Controllers\API\V1\Admin\AdminDashboardController;
 use App\Http\Controllers\API\V1\Admin\AdminUserController;
 use App\Http\Controllers\API\V1\Admin\AdminTransactionController;
 use App\Http\Controllers\API\V1\Admin\AdminAuditLogController;
+use App\Http\Controllers\API\V1\Admin\AdminKycController;
 
 Route::group(['prefix' => '/oauth'], function () {
     Route::post('token', [AccessTokenController::class, 'issue']);
@@ -212,6 +213,7 @@ Route::prefix('v1/admin')->group(function () {
             Route::get('export', [AdminDashboardController::class, 'exportReport']);
         });
 
+        // Audit Logs
         Route::prefix('audit-logs')->group(function () {
             Route::get('/', [AdminAuditLogController::class, 'index']);
             Route::get('/stats', [AdminAuditLogController::class, 'stats']);
@@ -219,6 +221,24 @@ Route::prefix('v1/admin')->group(function () {
             Route::get('/export', [AdminAuditLogController::class, 'export']);
             Route::get('/user/{userId}', [AdminAuditLogController::class, 'userLogs']);
             Route::get('/{id}', [AdminAuditLogController::class, 'show']);
+        });
+
+
+        // KYC Management
+        Route::prefix('kyc')->group(function () {
+            Route::get('/', [AdminKycController::class, 'index']);
+            Route::get('/statistics', [AdminKycController::class, 'statistics']);
+            Route::get('/{id}', [AdminKycController::class, 'show']);
+            Route::get('/config/providers', [AdminKycController::class, 'providers']);
+            Route::get('/config/methods', [AdminKycController::class, 'verificationMethods']);
+            Route::get('/config/settings', [AdminKycController::class, 'getSettings']);
+            Route::post('/{id}/set-verification-method', [AdminKycController::class, 'setVerificationMethod']);
+            Route::post('/{id}/approve', [AdminKycController::class, 'approve']);
+            Route::post('/{id}/reject', [AdminKycController::class, 'reject']);
+            Route::post('/{id}/request-resubmission', [AdminKycController::class, 'requestResubmission']);
+            Route::post('/{id}/mark-under-review', [AdminKycController::class, 'markAsUnderReview']);
+            Route::post('/{id}/trigger-verification', [AdminKycController::class, 'triggerAutomatedVerification']);
+            Route::post('/bulk-action', [AdminKycController::class, 'bulkAction']);
         });
     });
 
@@ -228,6 +248,11 @@ Route::prefix('v1/admin')->group(function () {
         Route::prefix('settings')->group(function () {
             Route::get('commission', [AdminSettingsController::class, 'getCommission']);
             Route::put('commission', [AdminSettingsController::class, 'updateCommission']);
+        });
+
+        Route::prefix('kyc')->group(function () {
+            Route::put('/config/settings', [AdminKycController::class, 'updateSettings']);
+
         });
 
         // Create admin users
