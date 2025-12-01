@@ -7,6 +7,7 @@ use App\Http\Requests\Wallet\CreateWalletRequest;
 use App\Http\Resources\WalletResource;
 use App\Services\WalletService;
 use App\Services\AuditLogService;
+use App\Services\VFDService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\Log;
 class WalletController extends Controller
 {
     public function __construct(
-        private WalletService $walletService
+        private WalletService $walletService,
+        private VFDService $vfdService 
     ) {}
 
     public function create(CreateWalletRequest $request): JsonResponse
@@ -41,22 +43,48 @@ class WalletController extends Controller
         }
     }
 
-    public function show(Request $request): JsonResponse
-    {
-        $user = $request->user();
+    // public function show(Request $request): JsonResponse
+    // {
+    //     $user = $request->user();
         
-        $wallet = $this->walletService->getWallet($user);
+    //     $wallet = $this->walletService->getWallet($user);
 
-        if (!$wallet) {
-            return response()->json([
-                'message' => 'Wallet not found'
-            ], 404);
-        }
+    //     if (!$wallet) {
+    //         return response()->json([
+    //             'message' => 'Wallet not found'
+    //         ], 404);
+    //     }
 
+    //     return response()->json([
+    //         'wallet' => new WalletResource($wallet)
+    //     ]);
+    // }
+
+    public function show(Request $request): JsonResponse
+{
+    $user = $request->user();
+    $wallet = $this->walletService->getWallet($user);
+
+    if (!$wallet) {
         return response()->json([
-            'wallet' => new WalletResource($wallet)
-        ]);
+            'message' => 'Wallet not found'
+        ], 404);
     }
+
+    $vfdBalance = $this->vfdService->getAccountDetails($wallet->account_number);
+
+    return response()->json([
+        'wallet' => [
+            'id' => $wallet->id,
+            'account_number' => $wallet->account_number,
+            'account_name' => $wallet->account_name,
+            'local_balance' => $wallet->account_balance,
+            'live_balance' => $vfdBalance['data']['accountBalance'] ?? null,
+            'balance_synced' => $wallet->account_balance == ($vfdBalance['data']['accountBalance'] ?? 0),
+        ]
+    ]);
+}
+
 
     public function deactivate(Request $request): JsonResponse
     {
@@ -76,4 +104,57 @@ class WalletController extends Controller
             'message' => 'Wallet deactivated successfully'
         ]);
     }
+
+
+    public function simulateCredit(Request $request): JsonResponse
+    {
+        
+        if (!app()->environment('local', 'testing')) {
+            return response()->json([
+                'message' => 'This endpoint is only available in test environment'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1|max:1000000',
+        ]);
+
+        $user = $request->user();
+        $wallet = $user->wallet;
+
+        if (!$wallet) {
+            return response()->json([
+                'message' => 'No wallet found. Please create a wallet first.'
+            ], 404);
+        }
+
+        if (!$wallet->is_active) {
+            return response()->json([
+                'message' => 'Wallet is not active'
+            ], 422);
+        }
+
+        $result = $this->vfdService->simulateCredit(
+            $wallet->account_number,
+            $validated['amount']
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'message' => $result['message'],
+                'details' => $result['data']
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Credit simulation successful. VFD will send webhook notification shortly.',
+            'data' => [
+                'account_number' => $wallet->account_number,
+                'amount' => $validated['amount'],
+                'vfd_response' => $result['data']
+            ]
+        ]);
+    }
+
+
 }

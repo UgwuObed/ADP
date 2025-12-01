@@ -29,6 +29,7 @@ use App\Http\Controllers\API\V1\Admin\AdminAuditLogController;
 use App\Http\Controllers\API\V1\Admin\AdminKycController;
 use App\Http\Controllers\API\V1\Admin\AdminWalletController;
 use App\Http\Controllers\API\V1\CustomerTicketController;
+use App\Http\Controllers\API\V1\TransactionController;
 use App\Http\Controllers\API\V1\TicketController;
 
 
@@ -72,6 +73,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/initial-inward-credit', [WebhookController::class, 'handleInitialInwardCredit']);
    });
 
+   
 
     Route::middleware(['auth:api', 'active.user'])->group(function () {
         
@@ -125,14 +127,15 @@ Route::prefix('v1')->group(function () {
             Route::post('/create', [WalletController::class, 'create']);
             Route::get('/', [WalletController::class, 'show']);
             Route::put('/deactivate', [WalletController::class, 'deactivate']);
+            Route::post('/simulate-credit', [WalletController::class, 'simulateCredit']);
         });
 
         // Airtime Routes
         Route::prefix('airtime')->group(function () {
-             Route::post('/fund-vtu', [AirtimeController::class, 'fundVtuAccount']);     // Buy bulk airtime credit
-            Route::post('/distribute', [AirtimeController::class, 'distribute']);       // Sell to customer
-            Route::get('/vtu-balance', [AirtimeController::class, 'vtuBalance']);       // Check VTU balance
-            Route::get('/distribution-history', [AirtimeController::class, 'distributionHistory']); // Distribution history
+             Route::post('/fund-vtu', [AirtimeController::class, 'fundVtuAccount']);     
+            Route::post('/distribute', [AirtimeController::class, 'distribute']);       
+            Route::get('/vtu-balance', [AirtimeController::class, 'vtuBalance']);      
+            Route::get('/distribution-history', [AirtimeController::class, 'distributionHistory']); 
         });
 
         Route::get('pricing', [NetworkController::class, 'pricing']);
@@ -185,6 +188,13 @@ Route::prefix('v1')->group(function () {
             Route::post('/{ticketId}/approve', [TicketController::class, 'approve'])->name('approve');
             Route::post('/{ticketId}/reject', [TicketController::class, 'reject'])->name('reject');
             Route::post('/{ticketId}/messages', [TicketController::class, 'addMessage'])->name('addMessage');
+        });
+
+        // Transaction endpoints
+        Route::prefix('transactions')->group(function () {
+            Route::get('/', [TransactionController::class, 'index']); 
+            Route::get('/statistics', [TransactionController::class, 'statistics']); 
+            Route::get('/{reference}', [TransactionController::class, 'show']); 
         });
 
     });

@@ -198,6 +198,11 @@ class User extends Authenticatable
         return $this->hasOne(Wallet::class);
     }
 
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
     public function vtuTransactions(): HasMany
     {
         return $this->hasMany(\App\Models\VtuTransaction::class);

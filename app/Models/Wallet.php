@@ -64,6 +64,35 @@ class Wallet extends Model
         return $this->hasOne(WalletSetting::class);
     }
 
+     /**
+     * Relationships
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * Get recent transactions
+     */
+    public function recentTransactions(int $limit = 10)
+    {
+        return $this->transactions()
+            ->latest()
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get completed transactions only
+     */
+    public function completedTransactions()
+    {
+        return $this->transactions()
+            ->where('status', 'completed')
+            ->latest();
+    }
+
     public function feeTransactions(): HasMany
     {
         return $this->hasMany(WalletFeeTransaction::class);
