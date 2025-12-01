@@ -39,11 +39,12 @@ class WalletService
                 }
 
                 if (!$result['success']) {
+                    $errorMessage = $result['message'] ?? 'Unknown error';
                     Log::error('VFD Account Creation Failed', [
                         'user_id' => $user->id,
-                        'error' => $result['message'] ?? 'Unknown error'
+                        'error' => $errorMessage
                     ]);
-                    return null;
+                    throw new \Exception($errorMessage);
                 }
 
                 $accountData = $result['data'];
@@ -76,7 +77,7 @@ class WalletService
                     'message' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
                 ]);
-                return null;
+                throw $e;
             }
         });
     }

@@ -9,6 +9,7 @@ use App\Services\WalletService;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WalletController extends Controller
 {
@@ -20,23 +21,24 @@ class WalletController extends Controller
     {
         $user = $request->user();
        
-        $wallet = $this->walletService->createWallet(
-            $user, 
-            $request->validated()
-        );
+        try {
+            $wallet = $this->walletService->createWallet(
+                $user, 
+                $request->validated()
+            );
 
-        if (!$wallet) {
+            AuditLogService::logWalletCreation($user, $wallet);
+            
             return response()->json([
-                'message' => 'Failed to create wallet'
+                'message' => 'Wallet created successfully',
+                'wallet' => new WalletResource($wallet)
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
             ], 422);
         }
-
-        AuditLogService::logWalletCreation($user, $wallet);
-        
-        return response()->json([
-            'message' => 'Wallet created successfully',
-            'wallet' => new WalletResource($wallet)
-        ], 201);
     }
 
     public function show(Request $request): JsonResponse
@@ -68,6 +70,7 @@ class WalletController extends Controller
             ], 404);
         }
 
+        AuditLogService::logWalletDeactivation($user, $result);
 
         return response()->json([
             'message' => 'Wallet deactivated successfully'
