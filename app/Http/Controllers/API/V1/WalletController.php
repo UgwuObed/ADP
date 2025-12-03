@@ -29,7 +29,7 @@ class WalletController extends Controller
                 $request->validated()
             );
 
-            AuditLogService::logWalletCreation($user, $wallet);
+            AuditLogService::logWalletCreated($user, $wallet);
             
             return response()->json([
                 'message' => 'Wallet created successfully',
