@@ -54,7 +54,7 @@ return [
 
     'vfd' => [
         'access_token' => env('VFD_ACCESS_TOKEN'),
-        'base_url' => env('VFD_BASE_URL', 'https://api-devapps.vfdbank.systems/vtech-wallet/api/v2/wallet2'),
+        'base_url' => env('VFD_BASE_URL', 'https://api-apps.vfdbank.systems/vtech-wallet/api/v1/wallet2'),
     ],
 
     'vtu' => [
