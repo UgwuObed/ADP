@@ -17,32 +17,26 @@ class AdminAuditLogController extends Controller
     {
         $query = AuditLog::with('user:id,full_name,email,role');
 
-        // Filter by user
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
-        // Filter by action
         if ($request->has('action')) {
             $query->where('action', $request->action);
         }
 
-        // Filter by user type
         if ($request->has('user_type')) {
             $query->where('user_type', $request->user_type);
         }
 
-        // Filter by entity type
         if ($request->has('entity_type')) {
             $query->where('entity_type', $request->entity_type);
         }
 
-        // Filter by severity
         if ($request->has('severity')) {
             $query->where('severity', $request->severity);
         }
 
-        // Date range
         if ($request->has('from')) {
             $query->whereDate('created_at', '>=', $request->from);
         }
@@ -50,12 +44,9 @@ class AdminAuditLogController extends Controller
             $query->whereDate('created_at', '<=', $request->to);
         }
 
-        // Search in description
         if ($request->has('search')) {
             $query->where('description', 'like', '%' . $request->search . '%');
         }
-
-        // Sort
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
@@ -82,12 +73,9 @@ class AdminAuditLogController extends Controller
         $query = AuditLog::with('user:id,full_name,email')
             ->where('user_id', $userId);
 
-        // Filter by action
         if ($request->has('action')) {
             $query->where('action', $request->action);
         }
-
-        // Date range
         if ($request->has('from')) {
             $query->whereDate('created_at', '>=', $request->from);
         }

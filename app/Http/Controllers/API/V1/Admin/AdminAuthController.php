@@ -46,7 +46,7 @@ class AdminAuthController extends Controller
 
         $user->updateLastLogin();
 
-        AuditLogService::logSuccessfulLogin($user->email);
+        AuditLogService::logLogin($user);
         
 
         $token = $user->createToken('admin-token', ['admin'])->accessToken;
