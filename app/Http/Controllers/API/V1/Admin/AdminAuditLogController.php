@@ -15,7 +15,9 @@ class AdminAuditLogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = AuditLog::with('user:id,full_name,email,role');
+        $query = AuditLog::with(['user' => function($q) {
+            $q->select('id', 'full_name', 'email', 'role_id')->with('role:id,name');
+        }]);
 
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
@@ -47,6 +49,7 @@ class AdminAuditLogController extends Controller
         if ($request->has('search')) {
             $query->where('description', 'like', '%' . $request->search . '%');
         }
+        
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
@@ -70,8 +73,9 @@ class AdminAuditLogController extends Controller
      */
     public function userLogs(int $userId, Request $request): JsonResponse
     {
-        $query = AuditLog::with('user:id,full_name,email')
-            ->where('user_id', $userId);
+        $query = AuditLog::with(['user' => function($q) {
+            $q->select('id', 'full_name', 'email', 'role_id')->with('role:id,name');
+        }])->where('user_id', $userId);
 
         if ($request->has('action')) {
             $query->where('action', $request->action);
@@ -102,7 +106,9 @@ class AdminAuditLogController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $log = AuditLog::with('user')->findOrFail($id);
+        $log = AuditLog::with(['user' => function($q) {
+            $q->with('role');
+        }])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -118,7 +124,6 @@ class AdminAuditLogController extends Controller
         $period = $request->get('period', 'today');
         $query = AuditLog::query();
 
-        // Apply period filter
         match($period) {
             'today' => $query->whereDate('created_at', today()),
             'week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
@@ -146,8 +151,10 @@ class AdminAuditLogController extends Controller
                 ])
                 ->toArray(),
             'by_user_type' => [
-                'admin' => (clone $query)->where('user_type', 'admin')->count(),
+                'system_admin' => (clone $query)->where('user_type', 'system_admin')->count(),
+                'system_manager' => (clone $query)->where('user_type', 'system_manager')->count(),
                 'super_admin' => (clone $query)->where('user_type', 'super_admin')->count(),
+                'admin' => (clone $query)->where('user_type', 'admin')->count(),
                 'manager' => (clone $query)->where('user_type', 'manager')->count(),
                 'distributor' => (clone $query)->where('user_type', 'distributor')->count(),
             ],
@@ -157,13 +164,15 @@ class AdminAuditLogController extends Controller
                 ->groupBy('user_id')
                 ->orderByDesc('activity_count')
                 ->limit(10)
-                ->with('user:id,full_name,email,role')
                 ->get()
+                ->load(['user' => function($q) {
+                    $q->select('id', 'full_name', 'email', 'role_id')->with('role:id,name');
+                }])
                 ->map(fn($item) => [
                     'user_id' => $item->user_id,
                     'user_name' => $item->user?->full_name,
                     'user_email' => $item->user?->email,
-                    'role' => $item->user?->role,
+                    'role' => $item->user?->role?->name,
                     'activity_count' => $item->activity_count,
                 ])
                 ->toArray(),
@@ -181,7 +190,9 @@ class AdminAuditLogController extends Controller
      */
     public function critical(Request $request): JsonResponse
     {
-        $logs = AuditLog::with('user:id,full_name,email')
+        $logs = AuditLog::with(['user' => function($q) {
+            $q->select('id', 'full_name', 'email', 'role_id')->with('role:id,name');
+        }])
             ->where('severity', 'critical')
             ->latest()
             ->paginate($request->get('per_page', 20));
@@ -203,9 +214,10 @@ class AdminAuditLogController extends Controller
      */
     public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        $query = AuditLog::with('user:id,full_name,email');
+        $query = AuditLog::with(['user' => function($q) {
+            $q->with('role');
+        }]);
 
-      
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
@@ -232,6 +244,8 @@ class AdminAuditLogController extends Controller
             fputcsv($file, [
                 'ID',
                 'User',
+                'User Email',
+                'User Role',
                 'User Type',
                 'Action',
                 'Description',
@@ -246,6 +260,8 @@ class AdminAuditLogController extends Controller
                 fputcsv($file, [
                     $log->id,
                     $log->user?->full_name ?? 'System',
+                    $log->user?->email ?? 'N/A',
+                    $log->user?->role?->name ?? 'N/A', 
                     $log->user_type ?? 'N/A',
                     $log->action,
                     $log->description,
@@ -260,7 +276,6 @@ class AdminAuditLogController extends Controller
             fclose($file);
         };
 
-        return response()->stream($callback, 200, $headers);
+        return response()->stream($callback, 200, headers: $headers);
     }
 }
-

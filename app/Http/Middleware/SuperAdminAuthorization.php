@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class AdminAuthorization
+class SuperAdminAuthorization
 {
     public function handle(Request $request, Closure $next)
     {
@@ -19,16 +19,20 @@ class AdminAuthorization
 
         $user = Auth::guard('api')->user();
 
+        // Load role relationship if not loaded
         if (!$user->relationLoaded('role')) {
             $user->load('role');
         }
-        if (!$user->isPlatformAdmin()) {
+
+        // Only allow system_admin
+        if (!$user->isSystemAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized. Admin access required.'
+                'message' => 'Forbidden: System admin access required'
             ], 403);
         }
 
+        // Check if user is active
         if (!$user->is_active) {
             return response()->json([
                 'success' => false,

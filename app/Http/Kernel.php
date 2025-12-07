@@ -78,5 +78,7 @@ class Kernel extends HttpKernel
         'active.user' => \App\Http\Middleware\CheckActiveUser::class,
         'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         'super_admin' => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
+        'admin' => \App\Http\Middleware\AdminAuthorization::class,
+        'super_admin' => \App\Http\Middleware\SuperAdminAuthorization::class,
     ];
 }

@@ -81,10 +81,32 @@ class User extends Authenticatable
     }
 
 
-    const ROLE_SUPER_ADMIN = 'super_admin';
-    const ROLE_ADMIN = 'admin';
-    const ROLE_MANAGER = 'manager';
-    const ROLE_DISTRIBUTOR = 'distributor';
+    const ROLE_SYSTEM_ADMIN = 'system_admin';
+const ROLE_SYSTEM_MANAGER = 'system_manager';
+const ROLE_SUPER_ADMIN = 'super_admin';
+const ROLE_ADMIN = 'admin';
+const ROLE_MANAGER = 'manager';
+const ROLE_DISTRIBUTOR = 'distributor';
+
+public function isSystemAdmin(): bool
+{
+    return $this->role_name === self::ROLE_SYSTEM_ADMIN;
+}
+
+public function isSystemManager(): bool
+{
+    return $this->role_name === self::ROLE_SYSTEM_MANAGER;
+}
+
+public function isPlatformAdmin(): bool
+{
+    return in_array($this->role_name, [self::ROLE_SYSTEM_ADMIN, self::ROLE_SYSTEM_MANAGER]);
+}
+
+public function isSuperAdmin(): bool
+{
+    return $this->role_name === self::ROLE_SUPER_ADMIN;
+}
 
     public static function getRoles(): array
     {
@@ -101,10 +123,6 @@ class User extends Authenticatable
         return $this->role_name === $roleName;
     }
 
-    public function isSuperAdmin(): bool
-    {
-        return $this->hasRole(self::ROLE_SUPER_ADMIN);
-    }
 
     public function isAdmin(): bool
     {

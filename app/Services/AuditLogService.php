@@ -14,7 +14,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $user->id,
-            'user_type' => $user->role,
+            'user_type' => $user->role_name, 
             'action' => 'login',
             'description' => "{$user->full_name} logged in",
             'severity' => 'info',
@@ -28,7 +28,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $user->id,
-            'user_type' => $user->role,
+            'user_type' => $user->role_name,  
             'action' => 'logout',
             'description' => "{$user->full_name} logged out",
             'severity' => 'info',
@@ -42,7 +42,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $user->id,
-            'user_type' => $user->role,
+            'user_type' => $user->role_name,
             'action' => 'stock_purchase',
             'entity_type' => 'StockPurchase',
             'entity_id' => $stockPurchase->id,
@@ -64,7 +64,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $user->id,
-            'user_type' => $user->role,
+            'user_type' => $user->role_name, 
             'action' => 'airtime_sale',
             'entity_type' => 'AirtimeSale',
             'entity_id' => $sale->id,
@@ -87,7 +87,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $user->id,
-            'user_type' => $user->role,
+            'user_type' => $user->role_name, 
             'action' => 'data_sale',
             'entity_type' => 'DataSale',
             'entity_id' => $sale->id,
@@ -111,7 +111,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $user->id,
-            'user_type' => $user->role,
+            'user_type' => $user->role_name, 
             'action' => 'wallet_created',
             'entity_type' => 'Wallet',
             'entity_id' => $wallet->id,
@@ -131,7 +131,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $admin->id,
-            'user_type' => $admin->role,
+            'user_type' => $admin->role_name, 
             'action' => 'user_updated',
             'entity_type' => 'User',
             'entity_id' => $targetUser->id,
@@ -151,7 +151,7 @@ class AuditLogService
         
         self::log([
             'user_id' => $admin->id,
-            'user_type' => $admin->role,
+            'user_type' => $admin->role_name, 
             'action' => "user_{$action}",
             'entity_type' => 'User',
             'entity_id' => $targetUser->id,
@@ -169,7 +169,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $admin->id,
-            'user_type' => $admin->role,
+            'user_type' => $admin->role_name, 
             'action' => 'user_deleted',
             'entity_type' => 'User',
             'entity_id' => $targetUser->id,
@@ -190,7 +190,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => null,
-            'user_type' => null,
+            'user_type' => 'guest', 
             'action' => 'login_failed',
             'description' => "Failed login attempt for {$email}",
             'metadata' => ['email' => $email, 'reason' => $reason],
@@ -205,14 +205,14 @@ class AuditLogService
     {
         self::log([
             'user_id' => $superAdmin->id,
-            'user_type' => $superAdmin->role,
+            'user_type' => $superAdmin->role_name, 
             'action' => 'admin_created',
             'entity_type' => 'User',
             'entity_id' => $newAdmin->id,
             'description' => "{$superAdmin->full_name} created new admin user {$newAdmin->full_name}",
             'new_values' => [
                 'email' => $newAdmin->email,
-                'role' => $newAdmin->role,
+                'role' => $newAdmin->role_name, // ✅ Changed from $newAdmin->role
             ],
             'severity' => 'critical',
         ]);
@@ -225,7 +225,7 @@ class AuditLogService
     {
         self::log([
             'user_id' => $admin->id,
-            'user_type' => $admin->role,
+            'user_type' => $admin->role_name, 
             'action' => 'commission_updated',
             'entity_type' => 'CommissionSetting',
             'description' => "{$admin->full_name} updated commission settings",

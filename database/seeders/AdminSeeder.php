@@ -12,27 +12,44 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         $this->seedRoles();
-        $this->seedAdmins();
+        $this->seedSystemAdmins();
     }
 
     private function seedRoles(): void
     {
         $roles = [
+            // PLATFORM ROLES (is_system_role = true, for your employees)
+            [
+                'name' => 'system_admin',
+                'description' => 'System Administrator - Full platform access',
+                'is_system_role' => true,
+            ],
+            [
+                'name' => 'system_manager',
+                'description' => 'System Manager - Limited platform access',
+                'is_system_role' => true,
+            ],
+            
+            // BUSINESS/CUSTOMER ROLES (is_system_role = true, default roles for customers)
             [
                 'name' => 'super_admin',
-                'description' => 'Super Administrator - Full system access',
+                'description' => 'Super Administrator - Full business access',
+                'is_system_role' => true,
             ],
             [
                 'name' => 'admin',
                 'description' => 'Administrator - Manage users and transactions',
+                'is_system_role' => true,
             ],
             [
                 'name' => 'manager',
                 'description' => 'Manager - View reports and manage distributors',
+                'is_system_role' => true,
             ],
             [
                 'name' => 'distributor',
                 'description' => 'Distributor - Buy and sell airtime/data',
+                'is_system_role' => true,
             ],
         ];
 
@@ -44,46 +61,48 @@ class AdminSeeder extends Seeder
         }
     }
 
-    private function seedAdmins(): void
+    private function seedSystemAdmins(): void
     {
-        $superAdminRole = Role::where('name', 'super_admin')->first();
-        $adminRole = Role::where('name', 'admin')->first();
+        $systemAdminRole = Role::where('name', 'system_admin')->first();
+        $systemManagerRole = Role::where('name', 'system_manager')->first();
 
-        // Super Admin
+        // System Admin (Platform Owner)
         User::updateOrCreate(
-            ['email' => 'superadmin@adp.com'],
-            [
-                'full_name' => 'Super Administrator',
-                'phone' => '08000000001',
-                'password' => Hash::make('SuperAdmin@123'),
-                'role_id' => $superAdminRole->id,
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
-
-        // Regular Admin
-        User::updateOrCreate(
-            ['email' => 'admin@adp.com'],
+            ['email' => 'systemadmin@adp.com'],
             [
                 'full_name' => 'System Administrator',
-                'phone' => '08000000002',
-                'password' => Hash::make('Admin@123'),
-                'role_id' => $adminRole->id,
+                'phone' => '08000000001',
+                'password' => Hash::make('SystemAdmin@123'),
+                'role_id' => $systemAdminRole->id,
                 'is_active' => true,
                 'email_verified_at' => now(),
+                'created_by' => null, // Platform admin has no creator
             ]
         );
 
-        $this->command->info('Admin users created successfully!');
+        // System Manager
+        User::updateOrCreate(
+            ['email' => 'systemmanager@adp.com'],
+            [
+                'full_name' => 'System Manager',
+                'phone' => '08000000002',
+                'password' => Hash::make('SystemManager@123'),
+                'role_id' => $systemManagerRole->id,
+                'is_active' => true,
+                'email_verified_at' => now(),
+                'created_by' => null, // Platform admin has no creator
+            ]
+        );
+
+        $this->command->info('System admins created successfully!');
         $this->command->newLine();
-        $this->command->info('📧 Super Admin:');
-        $this->command->info('   Email: superadmin@adp.com');
-        $this->command->info('   Password: SuperAdmin@123');
+        $this->command->info('📧 System Admin:');
+        $this->command->info('   Email: systemadmin@adp.com');
+        $this->command->info('   Password: SystemAdmin@123');
         $this->command->newLine();
-        $this->command->info('📧 Admin:');
-        $this->command->info('   Email: admin@adp.com');
-        $this->command->info('   Password: Admin@123');
+        $this->command->info('📧 System Manager:');
+        $this->command->info('   Email: systemmanager@adp.com');
+        $this->command->info('   Password: SystemManager@123');
         $this->command->newLine();
         $this->command->warn('⚠️  IMPORTANT: Change these passwords in production!');
     }

@@ -28,12 +28,12 @@ class AdminAuthController extends Controller
         }
 
         $user = Auth::user();
+        $user->load('role.permissions');
 
-        
-        if (!in_array($user->role, ['super_admin', 'admin', 'manager'])) {
+        if (!$user->isPlatformAdmin()) {
             Auth::logout();
             throw ValidationException::withMessages([
-                'email' => ['You do not have admin access.'],
+                'email' => ['You do not have platform admin access.'],
             ]);
         }
 
@@ -45,19 +45,15 @@ class AdminAuthController extends Controller
         }
 
         $user->updateLastLogin();
-
         AuditLogService::logLogin($user);
-        
 
-        $token = $user->createToken('admin-token', ['admin'])->accessToken;
+        $token = $user->createToken('admin-token')->accessToken;
 
         return response()->json([
             'success' => true,
             'message' => 'Admin login successful',
             'user' => new UserResource($user),
             'access_token' => $token,
-            'role' => $user->role,
-            'permissions' => $this->getUserPermissions($user),
         ]);
     }
 
@@ -67,6 +63,7 @@ class AdminAuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
+        $user->load('role.permissions');
 
         return response()->json([
             'success' => true,
@@ -97,7 +94,7 @@ class AdminAuthController extends Controller
     public function refresh(Request $request): JsonResponse
     {
         $request->user()->token()->revoke();
-        $token = $request->user()->createToken('admin-token', ['admin'])->accessToken;
+        $token = $request->user()->createToken('admin-token')->accessToken;
 
         return response()->json([
             'success' => true,
@@ -110,6 +107,33 @@ class AdminAuthController extends Controller
      */
     private function getUserPermissions($user): array
     {
+        if ($user->isSystemAdmin()) {
+            return [
+                'manage_all_users',
+                'manage_kyc',
+                'manage_all_wallets',
+                'view_all_transactions',
+                'manage_platform_settings',
+                'view_audit_logs',
+                'manage_commissions',
+                'manage_roles',
+                'manage_products',
+                'manage_settings',
+                'view_reports',
+                'manage_distributors',
+            ];
+        }
+
+        if ($user->isSystemManager()) {
+            return [
+                'manage_all_users',
+                'manage_kyc',
+                'manage_all_wallets',
+                'view_all_transactions',
+                'view_audit_logs',
+            ];
+        }
+
         if ($user->isSuperAdmin()) {
             return [
                 'manage_users',
