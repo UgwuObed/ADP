@@ -67,20 +67,20 @@ class User extends Authenticatable
         return $this->getDisplayNameAttribute();
     }
 
-    public function getRoleAttribute(): string
+  public function getRoleNameAttribute(): string
     {
         if ($this->role_id && $this->relationLoaded('role')) {
             return $this->getRelationValue('role')->name;
         }
         
         if ($this->role_id) {
-            return Role::find($this->role_id)->name ?? 'distributor';
+            return Role::find($this->role_id)?->name ?? 'distributor';
         }
 
         return 'distributor';
     }
 
-    
+
     const ROLE_SUPER_ADMIN = 'super_admin';
     const ROLE_ADMIN = 'admin';
     const ROLE_MANAGER = 'manager';
@@ -98,7 +98,7 @@ class User extends Authenticatable
 
     public function hasRole(string $roleName): bool
     {
-        return $this->role === $roleName;
+        return $this->role_name === $roleName;
     }
 
     public function isSuperAdmin(): bool

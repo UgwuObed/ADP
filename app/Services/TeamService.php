@@ -16,9 +16,8 @@ class TeamService
 public function getTeamMembers(User $currentUser, array $filters = []): Collection
 {
     $query = User::where('created_by', $currentUser->id)
-                ->with('role');
+                ->with(['role.permissions']); 
 
-    
     if (!empty($filters['role_id'])) {
         $query->where('role_id', $filters['role_id']);
     }

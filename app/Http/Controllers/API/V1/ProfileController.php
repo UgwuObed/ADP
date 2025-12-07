@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http\Controllers\API\V1;
 
 use App\Http\Controllers\Controller;
@@ -22,9 +21,12 @@ class ProfileController extends Controller
      */
     public function show(Request $request): JsonResponse
     {
+        // Load role with permissions
+        $user = $request->user()->load('role.permissions');
+        
         return response()->json([
             'success' => true,
-            'user' => new UserResource($request->user())
+            'user' => new UserResource($user)
         ]);
     }
 
@@ -37,6 +39,8 @@ class ProfileController extends Controller
             $request->user(),
             $request->validated()
         );
+
+        $user->load('role.permissions');
 
         return response()->json([
             'success' => true,

@@ -24,9 +24,25 @@ class AuthController extends Controller
         private PasswordResetService $passwordResetService
     ) {}
 
+    // public function register(RegisterRequest $request): JsonResponse
+    // {
+    //     $user = $this->authService->register($request->validated());
+        
+    //     $token = $user->createToken('auth-token')->accessToken;
+
+    //     return response()->json([
+    //         'message' => 'Registration successful',
+    //         'user' => new UserResource($user),
+    //         'access_token' => $token,
+    //         // 'token_type' => 'Bearer',
+    //     ], 201);
+    // }
+
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = $this->authService->register($request->validated());
+        
+        $user->load('role.permissions');
         
         $token = $user->createToken('auth-token')->accessToken;
 
@@ -34,42 +50,76 @@ class AuthController extends Controller
             'message' => 'Registration successful',
             'user' => new UserResource($user),
             'access_token' => $token,
-            // 'token_type' => 'Bearer',
         ], 201);
     }
 
+        // public function login(LoginRequest $request): JsonResponse
+        // {
+        //     $credentials = $request->only('email', 'password');
+
+        //     if (!auth()->attempt($credentials)) {
+        //         AuditLogService::logFailedLogin($request->email);
+        //         throw ValidationException::withMessages([
+        //             'email' => ['The provided credentials are incorrect.'],
+        //         ]);
+        //     }
+
+        //     $user = auth()->user();
+            
+        //     if (!$user->is_active) {
+        //         auth()->logout();
+        //         throw ValidationException::withMessages([
+        //             'email' => ['Your account has been deactivated. Please contact support.'],
+        //         ]);
+        //     }
+            
+        //     $user->updateLastLogin();
+            
+        //     AuditLogService::logLogin($user);
+
+        //     $token = $user->createToken('auth-token')->accessToken;
+
+        //     return response()->json([
+        //         'message' => 'Login successful',
+        //         'user' => new UserResource($user),
+        //         'access_token' => $token,
+        //     ]);
+        // }
+
         public function login(LoginRequest $request): JsonResponse
-        {
-            $credentials = $request->only('email', 'password');
+    {
+        $credentials = $request->only('email', 'password');
 
-            if (!auth()->attempt($credentials)) {
-                AuditLogService::logFailedLogin($request->email);
-                throw ValidationException::withMessages([
-                    'email' => ['The provided credentials are incorrect.'],
-                ]);
-            }
-
-            $user = auth()->user();
-            
-            if (!$user->is_active) {
-                auth()->logout();
-                throw ValidationException::withMessages([
-                    'email' => ['Your account has been deactivated. Please contact support.'],
-                ]);
-            }
-            
-            $user->updateLastLogin();
-            
-            AuditLogService::logLogin($user);
-
-            $token = $user->createToken('auth-token')->accessToken;
-
-            return response()->json([
-                'message' => 'Login successful',
-                'user' => new UserResource($user),
-                'access_token' => $token,
+        if (!auth()->attempt($credentials)) {
+            AuditLogService::logFailedLogin($request->email);
+            throw ValidationException::withMessages([
+                'email' => ['The provided credentials are incorrect.'],
             ]);
         }
+
+        $user = auth()->user();
+        
+        if (!$user->is_active) {
+            auth()->logout();
+            throw ValidationException::withMessages([
+                'email' => ['Your account has been deactivated. Please contact support.'],
+            ]);
+        }
+        
+        $user->updateLastLogin();
+        
+        AuditLogService::logLogin($user);
+
+        $user->load('role.permissions');
+
+        $token = $user->createToken('auth-token')->accessToken;
+
+        return response()->json([
+            'message' => 'Login successful',
+            'user' => new UserResource($user),
+            'access_token' => $token,
+        ]);
+    }
 
 
     public function logout(Request $request): JsonResponse
@@ -83,10 +133,19 @@ class AuthController extends Controller
         ]);
     }
 
+    // public function me(Request $request): JsonResponse
+    // {
+    //     return response()->json([
+    //         'user' => new UserResource($request->user())
+    //     ]);
+    // }
+
     public function me(Request $request): JsonResponse
     {
+        $user = $request->user()->load('role.permissions');
+        
         return response()->json([
-            'user' => new UserResource($request->user())
+            'user' => new UserResource($user)
         ]);
     }
 

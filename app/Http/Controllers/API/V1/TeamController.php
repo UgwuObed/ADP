@@ -86,6 +86,10 @@ public function store(CreateTeamMemberRequest $request): JsonResponse
 
         $statusCode = $result['success'] ? 201 : 422;
 
+        if ($result['success'] && isset($result['data'])) {
+            $result['data']->load('role.permissions');
+        }
+
         return response()->json([
             'success' => $result['success'],
             'message' => $result['message'],

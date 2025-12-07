@@ -67,7 +67,7 @@ class AdminKycApplicationResource extends JsonResource
     private function getStatusLabel(): string
     {
         return match($this->status) {
-            'pending' => 'Pending Review',
+            'pending' => 'Pending',
             'under_review' => 'Under Review',
             'approved' => 'Approved',
             'rejected' => 'Rejected',
