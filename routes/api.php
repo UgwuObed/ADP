@@ -256,6 +256,7 @@ Route::prefix('v1/admin')->group(function () {
             Route::get('/stats', [AdminAuditLogController::class, 'stats']);
             Route::get('/critical', [AdminAuditLogController::class, 'critical']);
             Route::get('/export', [AdminAuditLogController::class, 'export']);
+            Route::get('/grouped', [AdminAuditLogController::class, 'indexGrouped']);
             Route::get('/user/{userId}', [AdminAuditLogController::class, 'userLogs']);
             Route::get('/{id}', [AdminAuditLogController::class, 'show']);
         });

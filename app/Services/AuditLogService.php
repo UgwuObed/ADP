@@ -212,14 +212,14 @@ class AuditLogService
             'description' => "{$superAdmin->full_name} created new admin user {$newAdmin->full_name}",
             'new_values' => [
                 'email' => $newAdmin->email,
-                'role' => $newAdmin->role_name, // ✅ Changed from $newAdmin->role
+                'role' => $newAdmin->role_name, 
             ],
             'severity' => 'critical',
         ]);
     }
 
     /**
-     * Log commission settings change (super admin action)
+     * Log commission settings change 
      */
     public static function logCommissionUpdated(User $admin, array $oldSettings, array $newSettings): void
     {

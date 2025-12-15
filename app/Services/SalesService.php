@@ -140,7 +140,7 @@ class SalesService
                     'error' => $apiResult['message'],
                 ]);
 
-                AuditLogService::logAirtimeSaleFailed($user, $sale);
+                // AuditLogService::logAirtimeSaleFailed($user, $sale);
 
                 return [
                     'success' => false,

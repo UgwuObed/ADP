@@ -117,7 +117,7 @@ class StockService
                 'balance_after' => $walletAfter,
                 'reference' => $reference,
                 'narration' => "Purchase " . strtoupper($network) . " {$type} stock - ₦" . number_format($amount),
-                'status' => 'success',
+                'status' => 'completed',
                 'meta' => [
                     'stock_type' => $type,
                     'network' => $network,
@@ -126,7 +126,6 @@ class StockService
                 ],
             ]);
 
-            // Log stock purchase
             $purchase = StockPurchase::create([
                 'user_id' => $user->id,
                 'wallet_id' => $wallet->id,

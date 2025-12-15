@@ -11,7 +11,74 @@ use Illuminate\Http\Request;
 class AdminAuditLogController extends Controller
 {
     /**
-     * Get all audit logs 
+     * Get grouped audit logs by user with action counts
+     */
+    public function indexGrouped(Request $request): JsonResponse
+    {
+        $query = AuditLog::query()
+            ->select(
+                'user_id',
+                'user_type',
+                \DB::raw('COUNT(*) as total_actions'),
+                \DB::raw('MAX(created_at) as last_activity')
+            )
+            ->whereNotNull('user_id') // Exclude system actions
+            ->groupBy('user_id', 'user_type')
+            ->with(['user' => function($q) {
+                $q->select('id', 'full_name', 'email', 'role_id')->with('role:id,name');
+            }]);
+
+        // Apply filters
+        if ($request->has('user_type')) {
+            $query->where('user_type', $request->user_type);
+        }
+
+        if ($request->has('from')) {
+            $query->having('last_activity', '>=', $request->from);
+        }
+        if ($request->has('to')) {
+            $query->having('last_activity', '<=', $request->to);
+        }
+
+        if ($request->has('search')) {
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('full_name', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $sortBy = $request->get('sort_by', 'last_activity');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $groupedLogs = $query->paginate($request->get('per_page', 50));
+
+        return response()->json([
+            'success' => true,
+            'data' => $groupedLogs->map(function($log) {
+                return [
+                    'user_id' => $log->user_id,
+                    'user_name' => $log->user?->full_name ?? 'Unknown User',
+                    'user_email' => $log->user?->email ?? 'N/A',
+                    'user_role' => $log->user?->role?->name ?? 'N/A',
+                    'user_type' => $log->user_type,
+                    'total_actions' => $log->total_actions,
+                    'last_activity' => $log->last_activity,
+                    'last_activity_human' => \Carbon\Carbon::parse($log->last_activity)->diffForHumans(),
+                    'last_activity_formatted' => \Carbon\Carbon::parse($log->last_activity)->format('M d, Y H:i:s'),
+                ];
+            }),
+            'pagination' => [
+                'current_page' => $groupedLogs->currentPage(),
+                'last_page' => $groupedLogs->lastPage(),
+                'per_page' => $groupedLogs->perPage(),
+                'total' => $groupedLogs->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get all audit logs (individual entries)
      */
     public function index(Request $request): JsonResponse
     {
@@ -47,7 +114,14 @@ class AdminAuditLogController extends Controller
         }
 
         if ($request->has('search')) {
-            $query->where('description', 'like', '%' . $request->search . '%');
+            $query->where(function($q) use ($request) {
+                $q->where('description', 'like', '%' . $request->search . '%')
+                  ->orWhere('action', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('user', function($userQuery) use ($request) {
+                      $userQuery->where('full_name', 'like', '%' . $request->search . '%')
+                                ->orWhere('email', 'like', '%' . $request->search . '%');
+                  });
+            });
         }
         
         $sortBy = $request->get('sort_by', 'created_at');
@@ -80,6 +154,9 @@ class AdminAuditLogController extends Controller
         if ($request->has('action')) {
             $query->where('action', $request->action);
         }
+        if ($request->has('severity')) {
+            $query->where('severity', $request->severity);
+        }
         if ($request->has('from')) {
             $query->whereDate('created_at', '>=', $request->from);
         }
@@ -92,6 +169,12 @@ class AdminAuditLogController extends Controller
         return response()->json([
             'success' => true,
             'logs' => AuditLogResource::collection($logs),
+            'user' => $logs->first()?->user ? [
+                'id' => $logs->first()->user->id,
+                'name' => $logs->first()->user->full_name,
+                'email' => $logs->first()->user->email,
+                'role' => $logs->first()->user->role?->name,
+            ] : null,
             'pagination' => [
                 'current_page' => $logs->currentPage(),
                 'last_page' => $logs->lastPage(),
