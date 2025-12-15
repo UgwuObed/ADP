@@ -85,34 +85,34 @@ class AdminKycController extends Controller
     /**
      * Set verification method for KYC application
      */
-    public function setVerificationMethod(Request $request, int $id): JsonResponse
-    {
-        $request->validate([
-            'verification_method' => 'required|string|in:manual,automated',
-            'kyc_provider' => 'required_if:verification_method,automated|string|in:youverify,smile_identity,identitypass,prembly',
-        ]);
+    // public function setVerificationMethod(Request $request, int $id): JsonResponse
+    // {
+    //     $request->validate([
+    //         'verification_method' => 'required|string|in:manual,automated',
+    //         'kyc_provider' => 'required_if:verification_method,automated|string|in:youverify,smile_identity,identitypass,prembly',
+    //     ]);
 
-        $application = KycApplication::findOrFail($id);
+    //     $application = KycApplication::findOrFail($id);
 
-        if (!$application->isPending()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Can only set verification method for pending applications',
-            ], 422);
-        }
+    //     if (!$application->isPending()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Can only set verification method for pending applications',
+    //         ], 422);
+    //     }
 
-        $application = $this->kycService->setVerificationMethod(
-            $application,
-            $request->verification_method,
-            $request->kyc_provider
-        );
+    //     $application = $this->kycService->setVerificationMethod(
+    //         $application,
+    //         $request->verification_method,
+    //         $request->kyc_provider
+    //     );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Verification method updated successfully',
-            'application' => new AdminKycApplicationResource($application),
-        ]);
-    }
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Verification method updated successfully',
+    //         'application' => new AdminKycApplicationResource($application),
+    //     ]);
+    // }
 
     /**
      * Approve KYC application
@@ -299,32 +299,42 @@ class AdminKycController extends Controller
         ]);
     }
 
-    /**
-     * Update KYC settings (Super Admin only)
-     */
-    public function updateSettings(Request $request): JsonResponse
-    {
-        $request->validate([
-            'default_verification_method' => 'sometimes|string|in:manual,automated',
-            'default_kyc_provider' => 'sometimes|string|in:youverify,smile_identity,identitypass,prembly',
-            'auto_approve_threshold' => 'sometimes|integer|min:0|max:100',
-            'require_manual_review' => 'sometimes|boolean',
-        ]);
-
-        $this->kycService->updateSettings($request->only([
-            'default_verification_method',
-            'default_kyc_provider',
-            'auto_approve_threshold',
-            'require_manual_review',
-        ]));
-
+public function updateSettings(Request $request): JsonResponse
+{
+    if (!$request->user()->hasRole('system_admin')) {
         return response()->json([
-            'success' => true,
-            'message' => 'KYC settings updated successfully',
-            'settings' => $this->kycService->getSettings(),
-        ]);
+            'success' => false,
+            'message' => 'Unauthorized. System admin access required.',
+        ], 403);
     }
 
+    $request->validate([
+        'default_verification_method' => 'sometimes|string|in:manual,automated',
+        'default_kyc_provider' => 'sometimes|string|in:youverify,smile_identity,identitypass,prembly',
+        'auto_approve_threshold' => 'sometimes|integer|min:0|max:100',
+        'require_manual_review' => 'sometimes|boolean',
+    ]);
+
+    if ($request->default_verification_method === 'automated' && !$request->has('default_kyc_provider')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'default_kyc_provider is required when using automated verification',
+        ], 422);
+    }
+
+    $this->kycService->updateSettings($request->only([
+        'default_verification_method',
+        'default_kyc_provider',
+        'auto_approve_threshold',
+        'require_manual_review',
+    ]));
+
+    return response()->json([
+        'success' => true,
+        'message' => 'KYC settings updated successfully',
+        'settings' => $this->kycService->getSettings(),
+    ]);
+}
     /**
      * Bulk actions
      */

@@ -270,6 +270,7 @@ Route::prefix('v1/admin')->group(function () {
             Route::get('/config/providers', [AdminKycController::class, 'providers']);
             Route::get('/config/methods', [AdminKycController::class, 'verificationMethods']);
             Route::get('/config/settings', [AdminKycController::class, 'getSettings']);
+            Route::put('/config/settings', [AdminKycController::class, 'updateSettings']);
             Route::post('/{id}/set-verification-method', [AdminKycController::class, 'setVerificationMethod']);
             Route::post('/{id}/approve', [AdminKycController::class, 'approve']);
             Route::post('/{id}/reject', [AdminKycController::class, 'reject']);
@@ -307,9 +308,9 @@ Route::prefix('v1/admin')->group(function () {
             Route::put('commission', [AdminSettingsController::class, 'updateCommission']);
         });
 
-        Route::prefix('kyc')->group(function () {
-            Route::put('/config/settings', [AdminKycController::class, 'updateSettings']);
-        });
+        // Route::prefix('kyc')->group(function () {
+           
+        // });
 
         Route::prefix('wallets')->group(function () {
             Route::put('/settings/global', [AdminWalletController::class, 'updateGlobalSettings']);

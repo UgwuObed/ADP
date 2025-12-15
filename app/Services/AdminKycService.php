@@ -68,30 +68,30 @@ class AdminKycService
         ];
     }
 
-    /**
-     * Set verification method for a KYC application
-     */
-    public function setVerificationMethod(
-        KycApplication $application, 
-        string $method, 
-        ?string $provider = null
-    ): KycApplication {
-        if (!in_array($method, ['manual', 'automated'])) {
-            throw new \InvalidArgumentException('Invalid verification method');
-        }
+    // /**
+    //  * Set verification method for a KYC application
+    //  */
+    // public function setVerificationMethod(
+    //     KycApplication $application, 
+    //     string $method, 
+    //     ?string $provider = null
+    // ): KycApplication {
+    //     if (!in_array($method, ['manual', 'automated'])) {
+    //         throw new \InvalidArgumentException('Invalid verification method');
+    //     }
 
-        if ($method === 'automated' && !$provider) {
-            throw new \InvalidArgumentException('Provider is required for automated verification');
-        }
+    //     if ($method === 'automated' && !$provider) {
+    //         throw new \InvalidArgumentException('Provider is required for automated verification');
+    //     }
 
-        if ($method === 'automated' && !array_key_exists($provider, $this->getKycProviders())) {
-            throw new \InvalidArgumentException('Invalid KYC provider');
-        }
+    //     if ($method === 'automated' && !array_key_exists($provider, $this->getKycProviders())) {
+    //         throw new \InvalidArgumentException('Invalid KYC provider');
+    //     }
 
-        $application->setVerificationMethod($method, $provider);
+    //     $application->setVerificationMethod($method, $provider);
 
-        return $application->fresh();
-    }
+    //     return $application->fresh();
+    // }
 
     /**
      * Approve KYC application
