@@ -22,13 +22,12 @@ class AdminAuditLogController extends Controller
                 \DB::raw('COUNT(*) as total_actions'),
                 \DB::raw('MAX(created_at) as last_activity')
             )
-            ->whereNotNull('user_id') // Exclude system actions
+            ->whereNotNull('user_id')
             ->groupBy('user_id', 'user_type')
             ->with(['user' => function($q) {
                 $q->select('id', 'full_name', 'email', 'role_id')->with('role:id,name');
             }]);
 
-        // Apply filters
         if ($request->has('user_type')) {
             $query->where('user_type', $request->user_type);
         }

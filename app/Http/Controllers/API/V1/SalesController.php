@@ -51,27 +51,24 @@ class SalesController extends Controller
         return response()->json($result);
     }
 
-    /**
-     * Get sales history
-     */
     public function history(Request $request): JsonResponse
-    {
-        $sales = $this->salesService->getSalesHistory(
-            $request->user(),
-            $request->only(['type', 'network', 'status', 'from', 'to', 'per_page'])
-        );
+{
+    $sales = $this->salesService->getSalesHistory(
+        $request->user(),
+        $request->only(['type', 'network', 'status', 'from', 'to', 'per_page', 'search'])
+    );
 
-        return response()->json([
-            'success' => true,
-            'sales' => $sales,
-            'pagination' => [
-                'current_page' => $sales->currentPage(),
-                'last_page' => $sales->lastPage(),
-                'per_page' => $sales->perPage(),
-                'total' => $sales->total(),
-            ],
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'sales' => $sales,
+        'pagination' => [
+            'current_page' => $sales->currentPage(),
+            'last_page' => $sales->lastPage(),
+            'per_page' => $sales->perPage(),
+            'total' => $sales->total(),
+        ],
+    ]);
+}
 
     /**
      * Get airtime sales only

@@ -11,6 +11,7 @@ use App\Models\StockPurchase;
 use Illuminate\Http\JsonResponse;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class AdminUserController extends Controller
 {
@@ -55,6 +56,137 @@ class AdminUserController extends Controller
             ],
         ]);
     }
+    /**
+ * Get new users with filters
+ */
+public function getNewUsers(Request $request): JsonResponse
+{
+    $query = User::query();
+    
+    $query->select([
+        'users.id', 
+        'users.full_name',
+        'users.email',
+        'users.phone',
+        'users.is_active',
+        'users.created_at',
+        'users.role_id',
+        'users.last_login_at'
+    ]);
+    
+    $query->join('roles', 'users.role_id', '=', 'roles.id')
+        ->addSelect('roles.name as role_name');
+    
+    if ($request->has('date_from')) {
+        $dateFrom = Carbon::parse($request->date_from)->startOfDay();
+        $query->where('users.created_at', '>=', $dateFrom);
+    }
+    
+    if ($request->has('date_to')) {
+        $dateTo = Carbon::parse($request->date_to)->endOfDay();
+        $query->where('users.created_at', '<=', $dateTo);
+    }
+    
+    if ($request->has('last_days')) {
+        $days = (int) $request->last_days;
+        $query->where('users.created_at', '>=', Carbon::now()->subDays($days));
+    }
+    
+    if ($request->has('account_status')) {
+        $status = $request->account_status;
+        
+        if ($status === 'active') {
+            $query->where('users.is_active', true);
+        } elseif ($status === 'inactive') {
+            $query->where('users.is_active', false);
+        } elseif ($status === 'never_logged_in') {
+            $query->whereNull('users.last_login_at');
+        } elseif ($status === 'logged_in_today') {
+            $query->whereDate('users.last_login_at', Carbon::today());
+        }
+    }
+    
+    if ($request->has('role')) {
+        $query->where('roles.name', $request->role);
+    }
+    
+    if ($request->has('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('users.full_name', 'like', "%{$search}%")
+                ->orWhere('users.email', 'like', "%{$search}%")
+                ->orWhere('users.phone', 'like', "%{$search}%");
+        });
+    }
+    
+    $sortBy = $request->get('sort_by', 'created_at');
+    $sortOrder = $request->get('sort_order', 'desc');
+    
+    $allowedSortColumns = ['created_at', 'full_name', 'email', 'last_login_at'];
+    if (!in_array($sortBy, $allowedSortColumns)) {
+        $sortBy = 'created_at';
+    }
+    
+    if (in_array($sortBy, ['created_at', 'full_name', 'email', 'last_login_at'])) {
+        $sortBy = 'users.' . $sortBy;
+    }
+    
+    $query->orderBy($sortBy, $sortOrder === 'asc' ? 'asc' : 'desc');
+    
+    $perPage = $request->get('per_page', 50);
+    $users = $query->paginate($perPage);
+    
+    $transformedUsers = $users->map(function ($user) {
+        return [
+            'id' => $user->id,
+            'full_name' => $user->full_name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'account_status' => $user->is_active ? 'Active' : 'Inactive',
+            'last_login' => $user->last_login_at 
+                ? $user->last_login_at->format('Y-m-d H:i:s')
+                : 'Never',
+            'date_joined' => $user->created_at->format('Y-m-d H:i:s'),
+            'role' => $user->role_name,
+            'is_active' => (bool) $user->is_active,
+        ];
+    });
+   
+    $dateRange = [
+        $users->min('users.created_at') ?? Carbon::now()->subMonth(),
+        $users->max('users.created_at') ?? Carbon::now()
+    ];
+    
+    $summary = [
+        'total_new_users' => $users->total(),
+        'active_users' => User::where('is_active', true)
+            ->whereBetween('created_at', $dateRange)
+            ->count(),
+        'inactive_users' => User::where('is_active', false)
+            ->whereBetween('created_at', $dateRange)
+            ->count(),
+    ];
+    
+    return response()->json([
+        'success' => true,
+        'users' => $transformedUsers,
+        'summary' => $summary,
+        'filters_applied' => [
+            'date_from' => $request->date_from ?? null,
+            'date_to' => $request->date_to ?? null,
+            'last_days' => $request->last_days ?? null,
+            'account_status' => $request->account_status ?? null,
+            'role' => $request->role ?? null,
+            'search' => $request->search ?? null,
+        ],
+        'pagination' => [
+            'current_page' => $users->currentPage(),
+            'last_page' => $users->lastPage(),
+            'per_page' => $users->perPage(),
+            'total' => $users->total(),
+        ],
+    ]);
+}
 
     /**
      * Get single user details

@@ -14,8 +14,6 @@ class KycService
     private const REQUIRED_DOCUMENT_TYPES = [
         'business_certificate',
         'tax_certificate', 
-        // 'incorporation_certificate',
-        // 'utility_bill',
     ];
 
     public function getOrCreateApplication(User $user): KycApplication
@@ -43,7 +41,11 @@ class KycService
         $fileName = $this->generateFileName($file, $documentType);
         $filePath = "kyc/{$application->user_id}/documents/{$fileName}";
         
-        $fileUrl = Storage::disk('s3')->putFileAs('', $file, $filePath, 'public');
+        Storage::disk('s3')->put(
+            $filePath, 
+            file_get_contents($file), 
+            'public'
+        );
         
         return KycDocument::create([
             'kyc_application_id' => $application->id,
@@ -62,7 +64,11 @@ class KycService
             $fileName = $this->generateFileName($file, 'signature');
             $filePath = "kyc/{$application->user_id}/signature/{$fileName}";
             
-            Storage::disk('s3')->putFileAs('', $file, $filePath, 'public');
+            Storage::disk('s3')->put(
+                $filePath,
+                file_get_contents($file),
+                'public'
+            );
             
             $application->update([
                 'signature_type' => 'upload',
@@ -132,7 +138,6 @@ class KycService
     {
         return $file->getSize() <= ($maxSizeInMB * 1024 * 1024);
     }
-
 
     public function documentTypeExists(KycApplication $application, string $documentType): bool
     {
@@ -228,8 +233,6 @@ class KycService
         return [
             'business_certificate' => 'Business Registration Certificate',
             'tax_certificate' => 'Tax Identification Number (TIN) Certificate',
-            // 'incorporation_certificate' => 'Certificate of Incorporation',
-            // 'utility_bill' => 'Utility Bill',
         ];
     }
 

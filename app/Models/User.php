@@ -82,11 +82,11 @@ class User extends Authenticatable
 
 
     const ROLE_SYSTEM_ADMIN = 'system_admin';
-const ROLE_SYSTEM_MANAGER = 'system_manager';
-const ROLE_SUPER_ADMIN = 'super_admin';
-const ROLE_ADMIN = 'admin';
-const ROLE_MANAGER = 'manager';
-const ROLE_DISTRIBUTOR = 'distributor';
+    const ROLE_SYSTEM_MANAGER = 'system_manager';
+    const ROLE_SUPER_ADMIN = 'super_admin';
+    const ROLE_ADMIN = 'admin';
+    const ROLE_MANAGER = 'manager';
+    const ROLE_DISTRIBUTOR = 'distributor';
 
 public function isSystemAdmin(): bool
 {

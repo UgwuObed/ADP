@@ -63,9 +63,11 @@ return [
      ],
 
     'topupbox' => [
-        'base_url' => env('TOPUPBOX_BASE_URL', 'https://api.topupbox.com'),
+        'base_url' => env('TOPUPBOX_BASE_URL', 'https://vasapi.topupbox.com/services/bills'),
         'access_token' => env('TOPUPBOX_ACCESS_TOKEN'),
-      ],
+        'agent_id' => env('TOPUPBOX_AGENT_ID'),
+        'secret' => env('TOPUPBOX_SECRET'),
+    ],
 
 
 ];

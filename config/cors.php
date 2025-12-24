@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*', 'http://localhost:3000', 'https://adpengine.com'],
+    'allowed_origins' => ['*', 'http://localhost:3000', 'https://airtime-platform-client.vercel.app', 'https://mobile-airtime-platform-admin.vercel.app'],
 
     'allowed_origins_patterns' => [],
 

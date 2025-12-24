@@ -31,6 +31,8 @@ use App\Http\Controllers\API\V1\Admin\AdminWalletController;
 use App\Http\Controllers\API\V1\CustomerTicketController;
 use App\Http\Controllers\API\V1\TransactionController;
 use App\Http\Controllers\API\V1\TicketController;
+use App\Http\Controllers\API\V1\Admin\UserExportController;
+use App\Http\Controllers\API\V1\Admin\AdminRoleController;
 
 
 
@@ -219,6 +221,7 @@ Route::prefix('v1/admin')->group(function () {
         // Users Management
         Route::prefix('users')->group(function () {
             Route::get('/', [AdminUserController::class, 'index']);
+            Route::get('/new', [AdminUserController::class, 'getNewUsers']);
             Route::get('/{id}', [AdminUserController::class, 'show']);
             Route::put('/{id}', [AdminUserController::class, 'update']);
             Route::post('/{id}/activate', [AdminUserController::class, 'activate']);
@@ -298,6 +301,28 @@ Route::prefix('v1/admin')->group(function () {
             Route::post('/bulk-freeze', [AdminWalletController::class, 'bulkFreeze']);
             Route::post('/bulk-unfreeze', [AdminWalletController::class, 'bulkUnfreeze']);
         });
+
+
+        Route::prefix('export')->group(function () {
+            Route::get('users', [UserExportController::class, 'exportUsers']);
+            Route::get('new-users', [UserExportController::class, 'exportNewUsers']);
+            Route::get('users/{id}', [UserExportController::class, 'exportUserDetails']);
+            Route::get('users-by-role/{role}', [UserExportController::class, 'exportByRole']);
+            Route::get('activity-summary', [UserExportController::class, 'exportActivitySummary']);
+        });
+
+        Route::prefix('roles')->group(function () {
+            Route::get('/', [AdminRoleController::class, 'index']);
+            Route::post('/', [AdminRoleController::class, 'store']);
+            Route::get('/permissions', [AdminRoleController::class, 'permissions']);
+            Route::get('/statistics', [AdminRoleController::class, 'statistics']);
+            Route::get('/{roleId}', [AdminRoleController::class, 'show']);
+            Route::put('/{roleId}', [AdminRoleController::class, 'update']);
+            Route::delete('/{roleId}', [AdminRoleController::class, 'destroy']);
+            Route::get('/{roleId}/admins', [AdminRoleController::class, 'admins']);
+        });
+
+    
     });
 
  

@@ -287,78 +287,131 @@ class SalesService
         });
     }
 
-    /**
-     * Get sales history (airtime + data combined)
-     */
-    public function getSalesHistory(User $user, array $filters = [])
-    {
-        $type = $filters['type'] ?? 'all';
-        $perPage = $filters['per_page'] ?? 20;
 
-        if ($type === 'airtime') {
-            return $this->getAirtimeSales($user, $filters);
-        }
+/**
+ * Get sales history (airtime + data combined)
+ */
+public function getSalesHistory(User $user, array $filters = [])
+{
+    $type = $filters['type'] ?? 'all';
+    $perPage = $filters['per_page'] ?? 20;
 
-        if ($type === 'data') {
-            return $this->getDataSales($user, $filters);
-        }
-
-        
-        $airtimeSales = AirtimeSale::where('user_id', $user->id)
-            ->select('id', 'reference', 'network', 'phone', 'amount', 'status', 'created_at')
-            ->selectRaw("'airtime' as type")
-            ->selectRaw("NULL as plan_name");
-
-        $dataSales = DataSale::where('user_id', $user->id)
-            ->select('id', 'reference', 'network', 'phone', 'amount', 'status', 'created_at')
-            ->selectRaw("'data' as type")
-            ->addSelect('plan_name');
-
-        return $airtimeSales->union($dataSales)
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+    if ($type === 'airtime') {
+        return $this->getAirtimeSales($user, $filters);
     }
 
-    public function getAirtimeSales(User $user, array $filters = [])
-    {
-        $query = AirtimeSale::where('user_id', $user->id);
-
-        if (!empty($filters['network'])) {
-            $query->where('network', $filters['network']);
-        }
-
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (!empty($filters['from'])) {
-            $query->whereDate('created_at', '>=', $filters['from']);
-        }
-
-        if (!empty($filters['to'])) {
-            $query->whereDate('created_at', '<=', $filters['to']);
-        }
-
-        return $query->orderBy('created_at', 'desc')
-            ->paginate($filters['per_page'] ?? 20);
+    if ($type === 'data') {
+        return $this->getDataSales($user, $filters);
     }
 
-    public function getDataSales(User $user, array $filters = [])
-    {
-        $query = DataSale::where('user_id', $user->id);
+    $airtimeSales = AirtimeSale::where('user_id', $user->id)
+        ->select('id', 'reference', 'network', 'phone', 'amount', 'status', 'created_at')
+        ->selectRaw("'airtime' as type")
+        ->selectRaw("NULL as plan_name");
 
-        if (!empty($filters['network'])) {
-            $query->where('network', $filters['network']);
-        }
+    $dataSales = DataSale::where('user_id', $user->id)
+        ->select('id', 'reference', 'network', 'phone', 'amount', 'status', 'created_at')
+        ->selectRaw("'data' as type")
+        ->addSelect('plan_name');
 
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
+    $airtimeSales = $this->applyFilters($airtimeSales, $filters);
+    $dataSales = $this->applyFilters($dataSales, $filters);
 
-        return $query->orderBy('created_at', 'desc')
-            ->paginate($filters['per_page'] ?? 20);
+    return $airtimeSales->union($dataSales)
+        ->orderBy('created_at', 'desc')
+        ->paginate($perPage);
+}
+
+/**
+ * Apply common filters to query
+ */
+private function applyFilters($query, array $filters)
+{
+    if (!empty($filters['network'])) {
+        $query->where('network', strtolower($filters['network']));
+    }
+    if (!empty($filters['status'])) {
+        $query->where('status', $filters['status']);
+    }
+    if (!empty($filters['from'])) {
+        $query->whereDate('created_at', '>=', $filters['from']);
+    }
+    if (!empty($filters['to'])) {
+        $query->whereDate('created_at', '<=', $filters['to']);
+    }
+    if (!empty($filters['search'])) {
+        $search = $filters['search'];
+        $query->where(function($q) use ($search) {
+            $q->where('phone', 'like', "%{$search}%")
+              ->orWhere('reference', 'like', "%{$search}%");
+        });
     }
 
+    return $query;
+}
+
+public function getAirtimeSales(User $user, array $filters = [])
+{
+    $query = AirtimeSale::where('user_id', $user->id);
+
+    if (!empty($filters['network'])) {
+        $query->where('network', strtolower($filters['network']));
+    }
+
+    if (!empty($filters['status'])) {
+        $query->where('status', $filters['status']);
+    }
+
+    if (!empty($filters['from'])) {
+        $query->whereDate('created_at', '>=', $filters['from']);
+    }
+
+    if (!empty($filters['to'])) {
+        $query->whereDate('created_at', '<=', $filters['to']);
+    }
+    if (!empty($filters['search'])) {
+        $search = $filters['search'];
+        $query->where(function($q) use ($search) {
+            $q->where('phone', 'like', "%{$search}%")
+              ->orWhere('reference', 'like', "%{$search}%");
+        });
+    }
+
+    return $query->orderBy('created_at', 'desc')
+        ->paginate($filters['per_page'] ?? 20);
+}
+
+public function getDataSales(User $user, array $filters = [])
+{
+    $query = DataSale::where('user_id', $user->id);
+
+    if (!empty($filters['network'])) {
+        $query->where('network', strtolower($filters['network']));
+    }
+
+    if (!empty($filters['status'])) {
+        $query->where('status', $filters['status']);
+    }
+
+    if (!empty($filters['from'])) {
+        $query->whereDate('created_at', '>=', $filters['from']);
+    }
+
+    if (!empty($filters['to'])) {
+        $query->whereDate('created_at', '<=', $filters['to']);
+    }
+    if (!empty($filters['search'])) {
+        $search = $filters['search'];
+        $query->where(function($q) use ($search) {
+            $q->where('phone', 'like', "%{$search}%")
+              ->orWhere('reference', 'like', "%{$search}%")
+              ->orWhere('plan_name', 'like', "%{$search}%");
+        });
+    }
+
+    return $query->orderBy('created_at', 'desc')
+        ->paginate($filters['per_page'] ?? 20);
+}
     /**
      * Get sales stats
      */
