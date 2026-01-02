@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\{User, Role, Permission};
+use App\Models\{User, Role, Permission, AuditLog};
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Hash;
 
@@ -115,30 +115,6 @@ public function updateTeamMember(int $memberId, array $data, User $currentUser):
         
         return true;
     }
-
-// public function getAvailableRoles(User $currentUser): array
-// {
-
-//     $roles = Role::where(function($query) use ($currentUser) {
-//             $query->where('created_by', $currentUser->id)
-//                   ->orWhere('is_system_role', true);
-//         })
-//         ->with('permissions')
-//         ->orderBy('is_system_role', 'desc') 
-//         ->orderBy('name')
-//         ->get();
-
-//     return $roles->map(function($role) {
-//         return [
-//             'id' => $role->id,
-//             'name' => $role->name,
-//             'description' => $role->description,
-//             'permissions' => $role->permissions->pluck('key')->toArray(),
-//             'is_system_role' => $role->is_system_role,
-//             'label' => ucwords(str_replace('_', ' ', $role->name))
-//         ];
-//     })->toArray();
-// }
 
 public function getAvailableRoles(User $currentUser): array
 {
@@ -297,5 +273,47 @@ public function getAllPermissions(): array
     {
         return $this->teamInvitationService->completeRegistration($data, $token, $otp);
     }
+
+  public function getTeamMemberAuditLogs(int $memberId, User $currentUser, int $perPage = 20): array
+{
+    $member = User::where('id', $memberId)
+                  ->where('created_by', $currentUser->id)
+                  ->first();
+    
+    if (!$member) {
+        return [
+            'data' => [],
+            'pagination' => null
+        ];
+    }
+
+    $logs = AuditLog::where('user_id', $memberId)
+        ->orWhere(function($query) use ($memberId) {
+            $query->where('entity_type', 'User')
+                  ->where('entity_id', $memberId);
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate($perPage);
+
+    return [
+        'data' => $logs->map(function($log) {
+            return [
+                'id' => $log->id,
+                'action' => $log->action,
+                'description' => $log->description,
+                'date' => $log->created_at->format('Y-m-d H:i:s'),
+                'formatted_date' => $log->created_at->diffForHumans(),
+                'severity' => $log->severity,
+                'ip_address' => $log->ip_address,
+            ];
+        }),
+        'pagination' => [
+            'current_page' => $logs->currentPage(),
+            'total' => $logs->total(),
+            'per_page' => $logs->perPage(),
+            'last_page' => $logs->lastPage(),
+        ]
+    ];
+}
 
 }

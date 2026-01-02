@@ -111,9 +111,13 @@ public function store(CreateTeamMemberRequest $request): JsonResponse
             ], 404);
         }
 
+        $auditLogs = $this->teamService->getTeamMemberAuditLogs($memberId, $request->user());
+
+
         return response()->json([
             'success' => true,
-            'data' => new UserResource($member)
+            'data' => new UserResource($member),
+            'audit_logs' => $auditLogs
         ]);
     }
 
