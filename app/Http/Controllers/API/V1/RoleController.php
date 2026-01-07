@@ -65,4 +65,22 @@ class RoleController extends Controller
             ]
         ]);
     }
+
+    public function destroy(Request $request, int $roleId): JsonResponse
+    {
+            $result = $this->teamService->deleteCustomRole($roleId, $request->user());
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message']
+                ], $result['status'] ?? 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Role deleted successfully'
+            ]);
+    }
+
 }

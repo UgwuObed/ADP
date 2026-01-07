@@ -316,4 +316,131 @@ public function getAllPermissions(): array
     ];
 }
 
+
+public function removeTeamMember(int $memberId, User $currentUser): array
+{
+    $member = User::where('id', $memberId)
+                 ->where('created_by', $currentUser->id)
+                 ->first();
+    
+    if (!$member) {
+        return [
+            'success' => false,
+            'message' => 'Team member not found or unauthorized',
+            'status' => 404
+        ];
+    }
+
+    if ($member->id === $currentUser->id) {
+        return [
+            'success' => false,
+            'message' => 'You cannot remove yourself from the team',
+            'status' => 403
+        ];
+    }
+
+    try {
+        AuditLog::where('user_id', $memberId)
+                ->orWhere(function($query) use ($memberId) {
+                    $query->where('entity_type', 'User')
+                          ->where('entity_id', $memberId);
+                })
+                ->delete();
+        
+        if (class_exists('\App\Models\TeamInvitation')) {
+            \App\Models\TeamInvitation::where('email', $member->email)
+                ->where('invited_by', $currentUser->id)
+                ->delete();
+        }
+        
+        $member->tokens()->delete();
+        
+        $member->delete();
+
+        return [
+            'success' => true,
+            'message' => 'Team member removed successfully'
+        ];
+        
+    } catch (\Exception $e) {
+        \Log::error('Failed to remove team member: ' . $e->getMessage());
+        
+        return [
+            'success' => false,
+            'message' => 'Failed to remove team member. Please try again.',
+            'status' => 500
+        ];
+    }
+}
+
+
+public function deleteCustomRole(int $roleId, User $currentUser): array
+{
+    $role = Role::where('id', $roleId)
+               ->where('created_by', $currentUser->id)
+               ->first();
+    
+    if (!$role) {
+        return [
+            'success' => false,
+            'message' => 'Role not found or unauthorized',
+            'status' => 404
+        ];
+    }
+
+    if ($role->is_system_role) {
+        return [
+            'success' => false,
+            'message' => 'System roles cannot be deleted',
+            'status' => 403
+        ];
+    }
+
+    $userCount = User::where('role_id', $roleId)->count();
+    if ($userCount > 0) {
+        return [
+            'success' => false,
+            'message' => 'Cannot delete role. It is assigned to ' . $userCount . ' user(s).',
+            'status' => 422,
+            'data' => [
+                'assigned_users_count' => $userCount
+            ]
+        ];
+    }
+
+    try {
+        $role->permissions()->detach();
+        
+        $role->delete();
+
+        AuditLog::create([
+            'user_id' => $currentUser->id,
+            'action' => 'delete',
+            'entity_type' => 'Role',
+            'entity_id' => $roleId,
+            'description' => "Deleted role: {$role->name}",
+            'severity' => 'medium',
+            'ip_address' => request()->ip(),
+            'metadata' => [
+                'role_name' => $role->name,
+                'role_description' => $role->description
+            ]
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Role deleted successfully'
+        ];
+        
+    } catch (\Exception $e) {
+        \Log::error('Failed to delete role: ' . $e->getMessage());
+        
+        return [
+            'success' => false,
+            'message' => 'Failed to delete role. Please try again.',
+            'status' => 500
+        ];
+    }
+}
+
 }

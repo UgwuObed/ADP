@@ -33,6 +33,8 @@ use App\Http\Controllers\API\V1\TransactionController;
 use App\Http\Controllers\API\V1\TicketController;
 use App\Http\Controllers\API\V1\Admin\UserExportController;
 use App\Http\Controllers\API\V1\Admin\AdminRoleController;
+use App\Http\Controllers\API\V1\Admin\AdminUserReportsController;
+
 
 
 
@@ -103,12 +105,14 @@ Route::prefix('v1')->group(function () {
                 Route::get('roles', [RoleController::class, 'index']);
                 Route::post('roles', [RoleController::class, 'store']);
                 Route::put('roles/{roleId}', [RoleController::class, 'update']);
+                Route::delete('roles/{roleId}', [RoleController::class, 'destroy']);
                 
                 Route::get('permissions', [RoleController::class, 'permissions']); 
                 Route::get('{memberId}', [TeamController::class, 'show']);
                 Route::put('{memberId}', [TeamController::class, 'update']);
                 Route::post('{memberId}/deactivate', [TeamController::class, 'deactivate']);
                 Route::post('{memberId}/activate', [TeamController::class, 'activate']);
+                Route::delete('/{memberId}', [TeamController::class, 'destroy']);
             });
 
         // KYC Routes
@@ -322,7 +326,14 @@ Route::prefix('v1/admin')->group(function () {
             Route::get('/{roleId}/admins', [AdminRoleController::class, 'admins']);
         });
 
-    
+        
+        Route::prefix('user-reports')->group(function () { 
+            Route::get('/', [AdminUserReportsController::class, 'index']);
+            Route::get('/{userId}', [AdminUserReportsController::class, 'show']);
+            Route::get('/{userId}/export/pdf', [AdminUserReportsController::class, 'exportPdf']);
+            Route::get('/{userId}/export/csv', [AdminUserReportsController::class, 'exportCsv']);
+            Route::get('/{userId}/export/excel', [AdminUserReportsController::class, 'exportExcel']);
+        });
     });
 
  

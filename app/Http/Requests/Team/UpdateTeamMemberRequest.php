@@ -64,7 +64,6 @@ class UpdateTeamMemberRequest extends FormRequest
                     $validator->errors()->add('role_id', 'Cannot assign super admin role to team members.');
                 }
                 
-                
                 if (!$this->user()->hasPermission('assign_roles')) {
                     $validator->errors()->add('role_id', 'You do not have permission to assign roles.');
                 }

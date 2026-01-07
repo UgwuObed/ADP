@@ -215,4 +215,24 @@ public function store(CreateTeamMemberRequest $request): JsonResponse
             'data' => $stats
         ]);
     }
+
+    /**
+ * Remove/Delete team member
+ */
+    public function destroy(Request $request, int $memberId): JsonResponse
+    {
+        $result = $this->teamService->removeTeamMember($memberId, $request->user());
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], $result['status'] ?? 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Team member removed successfully'
+        ]);
+    }
 }
