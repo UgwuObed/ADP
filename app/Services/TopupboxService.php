@@ -24,14 +24,24 @@ class TopupboxService
     }
 
     /**
+     * Get authorization headers
+     */
+    private function getHeaders(): array
+    {
+        return [
+            'Authorization' => $this->accessToken,
+            'Content-Type' => 'application/json',
+        ];
+    }
+
+    /**
      * Get data packages for a network
      */
     public function getDataPackages(string $network): array
     {
         try {
-            $response = Http::withHeaders([
-                'Authorization' => $this->accessToken,
-            ])->get("{$this->baseUrl}/data-price-point/{$network}");
+            $response = Http::withHeaders($this->getHeaders())
+                ->get("{$this->baseUrl}/data-price-point/{$network}");
 
             $data = $response->json();
 
@@ -64,23 +74,18 @@ class TopupboxService
 
     /**
      * Purchase airtime
-     * Endpoint: /recharge/:network/:rechargeType
-     * Example: /recharge/mtn/airtime
      */
     public function purchaseAirtime(string $phone, float $amount, string $network): array
     {
         $reference = $this->generateReference();
         
         try {
-            // Correct payload format based on API docs
             $payload = [
-                'amount' => (string) $amount, // MUST be string
-                'beneficiary' => $this->formatPhone($phone), // NOT 'phone'
+                'amount' => (string) $amount, 
+                'beneficiary' => $this->formatPhone($phone), 
                 'customer_reference' => $reference,
-                // tariffTypeId is optional for airtime
             ];
 
-            // rechargeType should be lowercase 'airtime' not 'AIRTIME'
             $endpoint = "{$this->baseUrl}/recharge/{$network}/airtime";
 
             Log::info('Topupbox Airtime Request', [
@@ -89,10 +94,8 @@ class TopupboxService
                 'url' => $endpoint,
             ]);
 
-            $response = Http::withHeaders([
-                'Authorization' => $this->accessToken,
-                'Content-Type' => 'application/json',
-            ])->post($endpoint, $payload);
+            $response = Http::withHeaders($this->getHeaders())
+                ->post($endpoint, $payload);
 
             $data = $response->json();
 
@@ -106,9 +109,6 @@ class TopupboxService
                 'raw_body' => $response->body(),
             ]);
 
-            // Check status codes based on docs:
-            // statusCode 2000 = successful request
-            // statusCode 200 = successful transaction
             if ($response->successful() && $this->isSuccessResponse($data)) {
                 return [
                     'success' => true,
@@ -154,7 +154,7 @@ class TopupboxService
                 'amount' => (string) $amount,
                 'beneficiary' => $this->formatPhone($phone),
                 'customer_reference' => $reference,
-                'tariffTypeId' => $tariffTypeId, // Required for data
+                'tariffTypeId' => $tariffTypeId,
             ];
 
             $endpoint = "{$this->baseUrl}/recharge/{$network}/data";
@@ -165,10 +165,8 @@ class TopupboxService
                 'url' => $endpoint,
             ]);
 
-            $response = Http::withHeaders([
-                'Authorization' => $this->accessToken,
-                'Content-Type' => 'application/json',
-            ])->post($endpoint, $payload);
+            $response = Http::withHeaders($this->getHeaders())
+                ->post($endpoint, $payload);
 
             $data = $response->json();
 
@@ -210,54 +208,121 @@ class TopupboxService
         }
     }
 
-   private function isSuccessResponse(?array $data): bool
-{
-    if (!$data) return false;
+    /**
+     * Get merchant account balance
+     */
+    public function getBalance(): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->get("{$this->baseUrl}/balance");
 
-    if (isset($data['status'])) {
-        $status = (string) $data['status'];
-        if ($status === '2000') {
-            return true;
+            $data = $response->json();
+
+            Log::info('Topupbox Get Balance', [
+                'status_code' => $response->status(),
+                'response' => $data,
+                'raw_body' => $response->body(),
+            ]);
+
+            if ($response->successful() && $this->isSuccessResponse($data)) {
+                $balance = $data['data']['accountBalance'] 
+                    ?? $data['accountBalance'] 
+                    ?? $data['balance'] 
+                    ?? $data['data']['balance'] 
+                    ?? 0;
+                
+                $balance = (float) $balance;
+                
+                Log::info('Topupbox Balance Parsed', [
+                    'parsed_balance' => $balance,
+                    'raw_value' => $data['data']['accountBalance'] ?? 'not found',
+                ]);
+                
+                return [
+                    'success' => true,
+                    'balance' => $balance,
+                    'data' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $data['message'] ?? $data['description'] ?? 'Failed to fetch balance',
+                'balance' => 0,
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Topupbox Get Balance Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Service temporarily unavailable',
+                'balance' => 0,
+            ];
         }
     }
 
-    if (isset($data['response'])) {
-        $response = strtolower((string) $data['response']);
-        if (in_array($response, ['success', 'successful'])) {
-            return true;
+    /**
+     * Check if response indicates success
+     */
+    private function isSuccessResponse(?array $data): bool
+    {
+        if (!$data) return false;
+
+        if (isset($data['status'])) {
+            $status = (string) $data['status'];
+            if ($status === '2000') {
+                return true;
+            }
         }
-    }
 
-    if (isset($data['message'])) {
-        $message = strtolower((string) $data['message']);
-        if (in_array($message, ['success', 'successful', 'transaction successful'])) {
-            return true;
+        if (isset($data['response'])) {
+            $response = strtolower((string) $data['response']);
+            if (in_array($response, ['success', 'successful'])) {
+                return true;
+            }
         }
-    }
 
-    if (isset($data['success'])) {
-        return $data['success'] === true || $data['success'] === 'true';
-    }
-    if (isset($data['statusCode']) && $data['statusCode'] !== null) {
-        $statusCode = (string) $data['statusCode'];
-        if (in_array($statusCode, ['200', '2000'])) {
-            return true;
+        if (isset($data['message'])) {
+            $message = strtolower((string) $data['message']);
+            if (in_array($message, ['success', 'successful', 'transaction successful'])) {
+                return true;
+            }
         }
+
+        if (isset($data['success'])) {
+            return $data['success'] === true || $data['success'] === 'true';
+        }
+
+        if (isset($data['statusCode']) && $data['statusCode'] !== null) {
+            $statusCode = (string) $data['statusCode'];
+            if (in_array($statusCode, ['200', '2000'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    return false;
-}
-
+    /**
+     * Generate unique transaction reference
+     */
     private function generateReference(): string
     {
         return 'TXN' . time() . strtoupper(Str::random(8));
     }
 
+    /**
+     * Format phone number to local format
+     */
     private function formatPhone(string $phone): string
     {
         $phone = preg_replace('/[^0-9]/', '', $phone);
         
-        // Keep Nigerian format (0801234567)
         if (str_starts_with($phone, '234')) {
             $phone = '0' . substr($phone, 3);
         }
