@@ -104,10 +104,11 @@ Route::prefix('v1')->group(function () {
                 // role management routes 
                 Route::get('roles', [RoleController::class, 'index']);
                 Route::post('roles', [RoleController::class, 'store']);
+                Route::get('roles/{roleId}', [RoleController::class, 'show']);
                 Route::put('roles/{roleId}', [RoleController::class, 'update']);
                 Route::delete('roles/{roleId}', [RoleController::class, 'destroy']);
-                
                 Route::get('permissions', [RoleController::class, 'permissions']); 
+                // team member management routes 
                 Route::get('{memberId}', [TeamController::class, 'show']);
                 Route::put('{memberId}', [TeamController::class, 'update']);
                 Route::post('{memberId}/deactivate', [TeamController::class, 'deactivate']);

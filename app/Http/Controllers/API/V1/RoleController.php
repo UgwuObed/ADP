@@ -23,6 +23,23 @@ class RoleController extends Controller
         ]);
     }
 
+    public function show(Request $request, int $roleId): JsonResponse
+    {
+        $role = $this->teamService->getRoleDetails($roleId, $request->user());
+
+        if (!$role) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Role not found or unauthorized'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $role
+        ]);
+    }
+
     public function store(CreateRoleRequest $request): JsonResponse
     {
         $role = $this->teamService->createCustomRole($request->validated(), $request->user());

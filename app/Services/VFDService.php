@@ -141,66 +141,6 @@ class VFDService
     //     }
     // }
 
-     /**
-     * Simulate credit to an account (TEST ENVIRONMENT ONLY)
-     * This endpoint allows you to simulate an inflow on the dev environment
-     */
-    public function simulateCredit(string $accountNumber, string $amount): array
-    {
-        try {
-            Log::info('VFD Credit Simulation Initiated', [
-                'account_number' => $accountNumber,
-                'amount' => $amount
-            ]);
-
-            $response = Http::withHeaders([
-                'AccessToken' => $this->accessToken,
-                'Content-Type' => 'application/json',
-            ])->post("{$this->baseUrl}/credit", [
-                'amount' => $amount,
-                'accountNo' => $accountNumber,
-                'senderAccountNo' => '5050104057',  // Test account from VFD docs
-                'senderBank' => '999070',           // Test bank code from VFD docs
-                'senderNarration' => 'Test credit simulation'
-            ]);
-
-            $data = $response->json();
-
-            Log::info('VFD Credit Simulation Response', [
-                'response' => $data,
-                'status_code' => $response->status()
-            ]);
-
-            // VFD returns status "00" for success
-            if ($data['status'] === '00') {
-                return [
-                    'success' => true,
-                    'message' => $data['message'] ?? 'Credit simulation successful',
-                    'data' => $data
-                ];
-            }
-
-            return [
-                'success' => false,
-                'message' => $data['message'] ?? 'Credit simulation failed',
-                'data' => $data
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('VFD Credit Simulation Exception', [
-                'account_number' => $accountNumber,
-                'amount' => $amount,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Credit simulation failed: ' . $e->getMessage(),
-                'data' => null
-            ];
-        }
-    }
 
     /**
      * Get account balance and details

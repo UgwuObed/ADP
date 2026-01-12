@@ -443,4 +443,49 @@ public function deleteCustomRole(int $roleId, User $currentUser): array
     }
 }
 
+
+public function getRoleDetails(int $roleId, User $currentUser): ?array
+{
+    $role = Role::where('id', $roleId)
+        ->where(function($query) use ($currentUser) {
+            $query->where('created_by', $currentUser->id)
+                  ->orWhere('is_system_role', true);
+        })
+        ->with('permissions')
+        ->first();
+
+    if (!$role) {
+        return null;
+    }
+
+    $userStats = User::where('role_id', $roleId)
+        ->where('created_by', $currentUser->id)
+        ->selectRaw('COUNT(*) as total_users,
+                     SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active_users,
+                     SUM(CASE WHEN is_active = false THEN 1 ELSE 0 END) as inactive_users')
+        ->first();
+
+    return [
+        'id' => $role->id,
+        'name' => $role->name,
+        'display_name' => ucwords(str_replace('_', ' ', $role->name)),
+        'description' => $role->description,
+        'permissions' => $role->permissions->map(fn($p) => [
+            'key' => $p->key,
+            'description' => $p->description,
+            'group' => $p->group,
+            'display_name' => ucwords(str_replace('_', ' ', $p->key))
+        ])->toArray(),
+        'permissions_count' => $role->permissions->count(),
+        'total_users' => $userStats->total_users ?? 0,
+        'active_users' => $userStats->active_users ?? 0,
+        'inactive_users' => $userStats->inactive_users ?? 0,
+        'is_system_role' => $role->is_system_role,
+        'can_edit' => !$role->is_system_role,
+        'can_delete' => !$role->is_system_role && ($userStats->total_users == 0),
+        'created_at' => $role->created_at?->toISOString(),
+        'updated_at' => $role->updated_at?->toISOString(),
+    ];
+}
+
 }

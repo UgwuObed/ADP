@@ -43,32 +43,16 @@ class WalletController extends Controller
         }
     }
 
-    // public function show(Request $request): JsonResponse
-    // {
-    //     $user = $request->user();
-        
-    //     $wallet = $this->walletService->getWallet($user);
-
-    //     if (!$wallet) {
-    //         return response()->json([
-    //             'message' => 'Wallet not found'
-    //         ], 404);
-    //     }
-
-    //     return response()->json([
-    //         'wallet' => new WalletResource($wallet)
-    //     ]);
-    // }
-
-    public function show(Request $request): JsonResponse
+public function show(Request $request): JsonResponse
 {
     $user = $request->user();
     $wallet = $this->walletService->getWallet($user);
 
     if (!$wallet) {
         return response()->json([
-            'message' => 'Wallet not found'
-        ], 404);
+            'message' => 'No wallet found. Please create a wallet to get started.',
+            'has_wallet' => false
+        ], 200);
     }
 
     $vfdBalance = $this->vfdService->getAccountDetails($wallet->account_number);
@@ -81,8 +65,9 @@ class WalletController extends Controller
             'local_balance' => $wallet->account_balance,
             'live_balance' => $vfdBalance['data']['accountBalance'] ?? null,
             'balance_synced' => $wallet->account_balance == ($vfdBalance['data']['accountBalance'] ?? 0),
-        ]
-    ]);
+        ],
+        'has_wallet' => true
+    ], 200);
 }
 
 
