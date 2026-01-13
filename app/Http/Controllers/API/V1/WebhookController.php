@@ -12,31 +12,9 @@ use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
-    /**
-     * Handle VFD inward credit notifications (Final settlement)
-     * Called by VFD when money is successfully deposited and settled
-     * 
-     * Expected payload from VFD:
-     * {
-     *   "reference": "uniquevalue-123",
-     *   "amount": "1000",
-     *   "account_number": "1010123498",
-     *   "originator_account_number": "2910292882",
-     *   "originator_account_name": "AZUBUIKE MUSA DELE",
-     *   "originator_bank": "000004",
-     *   "originator_narration": "test",
-     *   "timestamp": "2021-01-11T09:34:55.879Z",
-     *   "transaction_channel": "EFT",
-     *   "session_id": "00001111222233334455"
-     * }
-     */
+   
     public function handleInwardCredit(Request $request): JsonResponse
     {
-        Log::info('VFD Inward Credit Webhook Received', [
-            'payload' => $request->all(),
-            'ip' => $request->ip(),
-        ]);
-
         try {
             $validated = $request->validate([
                 'reference' => 'required|string',
@@ -143,21 +121,10 @@ class WebhookController extends Controller
         }
     }
 
-    /**
-     * Handle VFD initial inward credit notifications (Before settlement)
-     * Called when transaction is initiated but funds not yet settled
-     * This is optional and needs to be activated by VFD
-     * 
-     * Expected payload includes all fields from handleInwardCredit plus:
-     * "initialCreditRequest": true
-     */
+  
     public function handleInitialInwardCredit(Request $request): JsonResponse
     {
-        Log::info('VFD Initial Inward Credit Webhook Received', [
-            'payload' => $request->all(),
-            'ip' => $request->ip(),
-        ]);
-
+      
         try {
             $validated = $request->validate([
                 'reference' => 'required|string',
@@ -197,7 +164,6 @@ class WebhookController extends Controller
                     return;
                 }
 
-                // Check if already exists
                 $existingTransaction = Transaction::where('reference', $validated['reference'])->first();
                 
                 if ($existingTransaction) {
