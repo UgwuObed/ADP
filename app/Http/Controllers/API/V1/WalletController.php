@@ -62,9 +62,7 @@ public function show(Request $request): JsonResponse
             'id' => $wallet->id,
             'account_number' => $wallet->account_number,
             'account_name' => $wallet->account_name,
-            'local_balance' => $wallet->account_balance,
-            'live_balance' => $vfdBalance['data']['accountBalance'] ?? null,
-            'balance_synced' => $wallet->account_balance == ($vfdBalance['data']['accountBalance'] ?? 0),
+            'balance' => $wallet->account_balance,
         ],
         'has_wallet' => true
     ], 200);
