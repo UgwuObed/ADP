@@ -18,7 +18,8 @@ class StockService
 {
 
     public function __construct(
-        private TopupboxService $topupbox
+        private TopupboxService $topupbox,
+        private NotificationService $notificationService
     ) {}
 
     /**
@@ -192,6 +193,25 @@ private function buyStock(User $user, string $network, string $type, float $amou
                 'amount' => $amount,
                 'cost' => $cost,
             ]);
+
+
+             $this->notificationService->notifyStockPurchase(
+            $user,
+            $network,
+            $type,
+            $amount,
+            $cost
+        );
+
+        if ($stock->balance < 5000) { 
+            $this->notificationService->notifyLowStock(
+                $user,
+                $network,
+                $type,
+                $stock->balance,
+                5000
+            );
+        }
 
             return [
                 'success' => true,

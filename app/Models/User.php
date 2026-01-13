@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -287,6 +288,22 @@ public function getOrCreateStock(string $network, string $type = 'airtime'): Dis
         ['network' => strtolower($network), 'type' => $type],
         ['balance' => 0, 'total_purchased' => 0, 'total_sold' => 0, 'is_active' => true]
     );
+}
+
+
+public function notifications(): HasMany
+{
+    return $this->hasMany(Notification::class);
+}
+
+public function notificationPreferences(): HasOne
+{
+    return $this->hasOne(NotificationPreference::class);
+}
+
+public function unreadNotifications(): HasMany
+{
+    return $this->notifications()->where('is_read', false);
 }
 
 }

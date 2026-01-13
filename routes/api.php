@@ -31,9 +31,12 @@ use App\Http\Controllers\API\V1\Admin\AdminWalletController;
 use App\Http\Controllers\API\V1\CustomerTicketController;
 use App\Http\Controllers\API\V1\TransactionController;
 use App\Http\Controllers\API\V1\TicketController;
+use App\Http\Controllers\API\V1\UtilityController;
+use App\Http\Controllers\API\V1\NotificationController;
 use App\Http\Controllers\API\V1\Admin\UserExportController;
 use App\Http\Controllers\API\V1\Admin\AdminRoleController;
 use App\Http\Controllers\API\V1\Admin\AdminUserReportsController;
+
 
 
 
@@ -202,6 +205,24 @@ Route::prefix('v1')->group(function () {
             Route::get('/', [TransactionController::class, 'index']); 
             Route::get('/statistics', [TransactionController::class, 'statistics']); 
             Route::get('/{reference}', [TransactionController::class, 'show']); 
+        });
+
+        // notifications endpoints
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [NotificationController::class, 'index']);
+            Route::get('/unread', [NotificationController::class, 'unread']);
+            Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+            Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+            Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+            Route::delete('/{id}', [NotificationController::class, 'destroy']);
+        
+            // preferences
+            Route::get('/preferences', [NotificationController::class, 'preferences']);
+            Route::put('/preferences', [NotificationController::class, 'updatePreferences']);
+        });
+
+        Route::prefix('utils')->group(function () {
+            Route::get('/nigerian-states', [UtilityController::class, 'nigerianStates']);
         });
 
     });

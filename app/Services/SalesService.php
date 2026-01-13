@@ -15,7 +15,8 @@ use Illuminate\Support\Str;
 class SalesService
 {
     public function __construct(
-        private TopupboxService $topupbox
+        private TopupboxService $topupbox,
+        private NotificationService $notificationService
     ) {}
 
     /**
@@ -103,6 +104,14 @@ class SalesService
                 ]);
 
                 AuditLogService::logAirtimeSale($user, $sale);
+
+                    $this->notificationService->notifyAirtimeSale(
+                        $user,
+                        $network,
+                        $phone,
+                        $amount,
+                        $reference
+                    );
 
                 Log::info('Airtime sold successfully', [
                     'user_id' => $user->id,

@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
+
+      public function __construct(
+        private NotificationService $notificationService
+    ) {}
    
     public function handleInwardCredit(Request $request): JsonResponse
     {
@@ -90,6 +94,14 @@ class WebhookController extends Controller
                     'meta' => $validated,
                     'completed_at' => now(),
                 ]);
+
+
+                $this->notificationService->notifyWalletCredit(
+                    $wallet->user,
+                    $validated['amount'],
+                    $validated['reference'],
+                    'bank_transfer'
+                );
 
                 Log::info('Wallet credited successfully', [
                     'wallet_id' => $wallet->id,

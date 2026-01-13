@@ -11,7 +11,8 @@ use Carbon\Carbon;
 class WalletService
 {
     public function __construct(
-        private VFDService $vfdService
+        private VFDService $vfdService,
+        private NotificationService $notificationService
     ) {}
 
     public function createWallet(User $user, array $data): ?Wallet
@@ -68,6 +69,14 @@ class WalletService
                     'user_id' => $user->id,
                     'account_number' => $accountData['accountNo']
                 ]);
+
+
+                $this->notificationService->notifySystem(
+                    $user,
+                    'Wallet Created Successfully',
+                    'Your virtual account has been created. You can now fund your wallet and start transacting.',
+                    'high'
+                );
 
                 return $wallet;
 
