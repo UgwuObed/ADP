@@ -22,6 +22,10 @@ class NotificationService
     const TYPE_TRANSACTION_FAILED = 'transaction_failed';
     const TYPE_SYSTEM = 'system';
 
+    public function __construct(
+        private ZeptoMailService $zeptoMailService
+    ) {}
+
     /**
      * Send notification to user
      */
@@ -46,6 +50,11 @@ class NotificationService
                 'icon' => $data['icon'] ?? $this->getDefaultIcon($data['type']),
                 'color' => $data['color'] ?? $this->getDefaultColor($data['type']),
             ]);
+
+            // Send email if enabled and type requires it
+            if ($preferences->email_enabled && $this->shouldSendEmail($data['type'])) {
+                $this->sendEmailForType($user, $data);
+            }
 
             Log::info('Notification sent', [
                 'user_id' => $user->id,
@@ -285,6 +294,104 @@ class NotificationService
             'priority' => $priority,
             'icon' => 'info',
             'color' => 'info',
+        ]);
+    }
+
+    /**
+     * Send email based on notification type
+     */
+    private function sendEmailForType(User $user, array $data): void
+    {
+        try {
+            $type = $data['type'];
+            $notificationData = $data['data'] ?? [];
+
+            switch ($type) {
+                case self::TYPE_AIRTIME_SALE:
+                    $this->zeptoMailService->sendAirtimeSaleEmail(
+                        $user->email,
+                        $user->full_name,
+                        $notificationData['network'],
+                        $notificationData['phone'],
+                        $notificationData['amount'],
+                        $notificationData['reference']
+                    );
+                    break;
+
+                case self::TYPE_STOCK_PURCHASE:
+                    $discount = (($notificationData['amount'] - $notificationData['cost']) / $notificationData['amount']) * 100;
+                    $this->zeptoMailService->sendStockPurchaseEmail(
+                        $user->email,
+                        $user->full_name,
+                        $notificationData['network'],
+                        $notificationData['type'],
+                        $notificationData['amount'],
+                        $notificationData['cost'],
+                        $discount
+                    );
+                    break;
+
+                case self::TYPE_LOW_STOCK:
+                    $this->zeptoMailService->sendLowStockAlertEmail(
+                        $user->email,
+                        $user->full_name,
+                        $notificationData['network'],
+                        $notificationData['type'],
+                        $notificationData['current_balance'],
+                        $notificationData['threshold']
+                    );
+                    break;
+
+                case self::TYPE_DATA_SALE:
+                    $this->zeptoMailService->sendDataSaleEmail(
+                        $user->email,
+                        $user->full_name,
+                        $notificationData['network'],
+                        $notificationData['plan'],
+                        $notificationData['phone'],
+                        $notificationData['amount'],
+                        $notificationData['reference']
+                    );
+                    break;
+
+                case self::TYPE_WALLET_CREDIT:
+                    $this->zeptoMailService->sendWalletCreditEmail(
+                        $user->email,
+                        $user->full_name,
+                        $notificationData['amount'],
+                        $notificationData['reference'],
+                        $notificationData['source']
+                    );
+                    break;
+            }
+
+            Log::info('Email notification sent', [
+                'user_id' => $user->id,
+                'type' => $type,
+                'email' => $user->email
+            ]);
+
+        } catch (\Exception $e) {
+            Log::warning('Failed to send email notification', [
+                'user_id' => $user->id,
+                'type' => $data['type'],
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Determine if email should be sent for notification type
+     */
+    private function shouldSendEmail(string $type): bool
+    {
+        return in_array($type, [
+            self::TYPE_AIRTIME_SALE,
+            self::TYPE_DATA_SALE,
+            self::TYPE_STOCK_PURCHASE,
+            self::TYPE_LOW_STOCK,
+            self::TYPE_WALLET_CREDIT,
+            self::TYPE_TRANSACTION_FAILED,
         ]);
     }
 

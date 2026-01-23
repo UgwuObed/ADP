@@ -145,4 +145,162 @@ public function sendWelcomeEmail(string $email, string $userName): bool
     return $result['success'];
 }
 
+
+/**
+     * Send airtime sale notification email
+     */
+    public function sendAirtimeSaleEmail(
+        string $email, 
+        string $userName, 
+        string $network, 
+        string $phone, 
+        float $amount, 
+        string $reference
+    ): bool {
+        $templateKey = config('services.zeptomail.airtime_sale_template_key');
+        
+        $mergeData = [
+            'user_name' => $userName,
+            'network' => strtoupper($network),
+            'phone_number' => $phone,
+            'amount' => number_format($amount, 2),
+            'reference' => $reference,
+            'transaction_date' => now()->format('M d, Y h:i A'),
+            'dashboard_url' => config('app.frontend_url') . '/sales',
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+            'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
+        ];
+
+        $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
+        
+        return $result['success'];
+    }
+
+    /**
+     * Send data sale notification email
+     */
+    public function sendDataSaleEmail(
+        string $email, 
+        string $userName, 
+        string $network, 
+        string $plan,
+        string $phone, 
+        float $amount, 
+        string $reference
+    ): bool {
+        $templateKey = config('services.zeptomail.data_sale_template_key');
+        
+        $mergeData = [
+            'user_name' => $userName,
+            'network' => strtoupper($network),
+            'plan_name' => $plan,
+            'phone_number' => $phone,
+            'amount' => number_format($amount, 2),
+            'reference' => $reference,
+            'transaction_date' => now()->format('M d, Y h:i A'),
+            'dashboard_url' => config('app.frontend_url') . '/sales',
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+            'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
+        ];
+
+        $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
+        
+        return $result['success'];
+    }
+
+    /**
+     * Send stock purchase notification email
+     */
+    public function sendStockPurchaseEmail(
+        string $email, 
+        string $userName, 
+        string $network, 
+        string $type, 
+        float $amount, 
+        float $cost, 
+        float $discount
+    ): bool {
+        $templateKey = config('services.zeptomail.stock_purchase_template_key');
+        
+        $mergeData = [
+            'user_name' => $userName,
+            'network' => strtoupper($network),
+            'stock_type' => ucfirst($type),
+            'stock_amount' => number_format($amount, 2),
+            'amount_paid' => number_format($cost, 2),
+            'savings' => number_format($amount - $cost, 2),
+            'discount_percent' => number_format($discount, 1),
+            'transaction_date' => now()->format('M d, Y h:i A'),
+            'stock_url' => config('app.frontend_url') . '/stock',
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+            'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
+        ];
+
+        $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
+        
+        return $result['success'];
+    }
+
+    /**
+     * Send low stock alert email
+     */
+    public function sendLowStockAlertEmail(
+        string $email, 
+        string $userName, 
+        string $network, 
+        string $type, 
+        float $currentBalance, 
+        float $threshold
+    ): bool {
+        $templateKey = config('services.zeptomail.low_stock_alert_template_key');
+        
+        $mergeData = [
+            'user_name' => $userName,
+            'network' => strtoupper($network),
+            'stock_type' => ucfirst($type),
+            'current_balance' => number_format($currentBalance, 2),
+            'threshold' => number_format($threshold, 2),
+            'recharge_url' => config('app.frontend_url') . '/stock/purchase',
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+            'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
+        ];
+
+        $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
+        
+        return $result['success'];
+    }
+
+    /**
+     * Send wallet credit notification email
+     */
+    public function sendWalletCreditEmail(
+        string $email, 
+        string $userName, 
+        float $amount, 
+        string $reference,
+        string $source = 'deposit'
+    ): bool {
+        $templateKey = config('services.zeptomail.wallet_credit_template_key');
+        
+        $mergeData = [
+            'user_name' => $userName,
+            'amount' => number_format($amount, 2),
+            'reference' => $reference,
+            'source' => ucfirst($source),
+            'transaction_date' => now()->format('M d, Y h:i A'),
+            'wallet_url' => config('app.frontend_url') . '/wallet',
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+            'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
+        ];
+
+        $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
+        
+        return $result['success'];
+    }
+
 }

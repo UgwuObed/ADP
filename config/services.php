@@ -44,6 +44,11 @@ return [
         'team_invitation_template_key' => env('ZEPTOMAIL_TEAM_INVITATION_TEMPLATE_KEY', 'team_invitation'),
         'welcome_template_key' => env('ZEPTOMAIL_WELCOME_TEMPLATE_KEY', 'welcome'),
         'support_email' => env('SUPPORT_EMAIL', 'support@adp.com'),
+        'airtime_sale_template_key' => env('ZEPTOMAIL_AIRTIME_SALE_TEMPLATE_KEY'),
+        'data_sale_template_key' => env('ZEPTOMAIL_DATA_SALE_TEMPLATE_KEY'),
+        'stock_purchase_template_key' => env('ZEPTOMAIL_STOCK_PURCHASE_TEMPLATE_KEY'),
+        'low_stock_alert_template_key' => env('ZEPTOMAIL_LOW_STOCK_ALERT_TEMPLATE_KEY'),
+        'wallet_credit_template_key' => env('ZEPTOMAIL_WALLET_CREDIT_TEMPLATE_KEY'),
     ],
 
     // 'vfd' => [
