@@ -36,6 +36,8 @@ use App\Http\Controllers\API\V1\NotificationController;
 use App\Http\Controllers\API\V1\Admin\UserExportController;
 use App\Http\Controllers\API\V1\Admin\AdminRoleController;
 use App\Http\Controllers\API\V1\Admin\AdminUserReportsController;
+use App\Http\Controllers\API\V1\Admin\AdminTopupboxController;
+
 
 
 
@@ -355,6 +357,16 @@ Route::prefix('v1/admin')->group(function () {
             Route::get('/{userId}/export/pdf', [AdminUserReportsController::class, 'exportPdf']);
             Route::get('/{userId}/export/csv', [AdminUserReportsController::class, 'exportCsv']);
             Route::get('/{userId}/export/excel', [AdminUserReportsController::class, 'exportExcel']);
+        });
+
+
+        // source endpoints
+        Route::prefix('topupbox')->group(function () {
+          Route::get('/balance', [AdminTopupboxController::class, 'getBalance']);
+          Route::get('/balance/cached', [AdminTopupboxController::class, 'getBalanceCached']);
+          Route::post('/balance/refresh', [AdminTopupboxController::class, 'refreshBalance']);
+          Route::get('/data-packages/{network}', [AdminTopupboxController::class, 'getDataPackages']);
+          Route::get('/test-connection', [AdminTopupboxController::class, 'testConnection']);
         });
     });
 
