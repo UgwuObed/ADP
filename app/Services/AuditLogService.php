@@ -246,11 +246,92 @@ class AuditLogService
                 'user_agent' => Request::userAgent(),
             ]));
         } catch (\Exception $e) {
-            // Log to Laravel's log file if database insert fails
             \Log::error('Audit log failed', [
                 'data' => $data,
                 'error' => $e->getMessage(),
             ]);
         }
     }
+
+    /**
+ * Log platform admin created
+ */
+public static function logPlatformAdminCreated(User $creator, User $newAdmin): void
+{
+    self::log([
+        'user_id' => $creator->id,
+        'user_type' => $creator->role_name,
+        'action' => 'platform_admin_created',
+        'entity_type' => 'User',
+        'entity_id' => $newAdmin->id,
+        'description' => "{$creator->full_name} created platform admin {$newAdmin->full_name} ({$newAdmin->role_name})",
+        'new_values' => [
+            'email' => $newAdmin->email,
+            'full_name' => $newAdmin->full_name,
+            'phone' => $newAdmin->phone,
+            'role' => $newAdmin->role_name,
+        ],
+        'severity' => 'critical',
+    ]);
+}
+
+/**
+ * Log platform admin updated
+ */
+public static function logPlatformAdminUpdated(User $updater, User $admin, array $changes = []): void
+{
+    self::log([
+        'user_id' => $updater->id,
+        'user_type' => $updater->role_name,
+        'action' => 'platform_admin_updated',
+        'entity_type' => 'User',
+        'entity_id' => $admin->id,
+        'description' => "{$updater->full_name} updated platform admin {$admin->full_name}",
+        'new_values' => $changes,
+        'severity' => 'warning',
+    ]);
+}
+
+/**
+ * Log platform admin deleted
+ */
+public static function logPlatformAdminDeleted(User $deleter, User $admin): void
+{
+    self::log([
+        'user_id' => $deleter->id,
+        'user_type' => $deleter->role_name,
+        'action' => 'platform_admin_deleted',
+        'entity_type' => 'User',
+        'entity_id' => $admin->id,
+        'description' => "{$deleter->full_name} deleted platform admin {$admin->full_name} ({$admin->email})",
+        'old_values' => [
+            'email' => $admin->email,
+            'full_name' => $admin->full_name,
+            'phone' => $admin->phone,
+            'role' => $admin->role_name,
+        ],
+        'severity' => 'critical',
+    ]);
+}
+
+/**
+ * Log platform admin status changed
+ */
+public static function logPlatformAdminStatusChanged(User $changer, User $admin, bool $isActive): void
+{
+    $action = $isActive ? 'activated' : 'deactivated';
+    
+    self::log([
+        'user_id' => $changer->id,
+        'user_type' => $changer->role_name,
+        'action' => "platform_admin_{$action}",
+        'entity_type' => 'User',
+        'entity_id' => $admin->id,
+        'description' => "{$changer->full_name} {$action} platform admin {$admin->full_name}",
+        'old_values' => ['is_active' => !$isActive],
+        'new_values' => ['is_active' => $isActive],
+        'severity' => 'warning',
+    ]);
+}
+
 }

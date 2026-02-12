@@ -37,6 +37,8 @@ use App\Http\Controllers\API\V1\Admin\UserExportController;
 use App\Http\Controllers\API\V1\Admin\AdminRoleController;
 use App\Http\Controllers\API\V1\Admin\AdminUserReportsController;
 use App\Http\Controllers\API\V1\Admin\AdminTopupboxController;
+use App\Http\Controllers\API\V1\Admin\PlatformAdminController;
+
 
 
 
@@ -368,6 +370,19 @@ Route::prefix('v1/admin')->group(function () {
           Route::get('/data-packages/{network}', [AdminTopupboxController::class, 'getDataPackages']);
           Route::get('/test-connection', [AdminTopupboxController::class, 'testConnection']);
         });
+
+        Route::prefix('platform-admins')->group(function () {
+            Route::get('/', [PlatformAdminController::class, 'index']);
+            Route::post('/', [PlatformAdminController::class, 'store']);
+            Route::get('/statistics', [PlatformAdminController::class, 'statistics']);
+            Route::get('/roles', [PlatformAdminController::class, 'roles']);
+            Route::get('/{admin}', [PlatformAdminController::class, 'show']);
+            Route::put('/{admin}', [PlatformAdminController::class, 'update']);
+            Route::delete('/{admin}', [PlatformAdminController::class, 'destroy']);
+            Route::post('/{admin}/deactivate', [PlatformAdminController::class, 'deactivate']);
+            Route::post('/{admin}/activate', [PlatformAdminController::class, 'activate']);
+    });
+
     });
 
  
