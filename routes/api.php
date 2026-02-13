@@ -38,6 +38,9 @@ use App\Http\Controllers\API\V1\Admin\AdminRoleController;
 use App\Http\Controllers\API\V1\Admin\AdminUserReportsController;
 use App\Http\Controllers\API\V1\Admin\AdminTopupboxController;
 use App\Http\Controllers\API\V1\Admin\PlatformAdminController;
+use App\Http\Controllers\API\V1\Admin\AdminSettlementAccountController;
+use App\Http\Controllers\API\V1\Admin\AdminFundingController;
+
 
 
 
@@ -142,7 +145,13 @@ Route::prefix('v1')->group(function () {
             Route::get('/', [WalletController::class, 'show']);
             Route::put('/deactivate', [WalletController::class, 'deactivate']);
             Route::post('/simulate-credit', [WalletController::class, 'simulateCredit']);
+            Route::post('/funding/initiate', [WalletController::class, 'initiateFunding'])->name('funding.initiate');
+            Route::post('/funding/{reference}/upload-proof', [WalletController::class, 'uploadProof'])->name('funding.upload-proof');
+            Route::get('/funding/history', [WalletController::class, 'fundingHistory'])->name('funding.history');
+            Route::get('/funding/{reference}', [WalletController::class, 'fundingRequestDetails'])->name('funding.details');
+            Route::post('/funding/{reference}/cancel', [WalletController::class, 'cancelFundingRequest'])->name('funding.cancel');
         });
+
 
         // Airtime Routes
         Route::prefix('airtime')->group(function () {
@@ -330,6 +339,32 @@ Route::prefix('v1/admin')->group(function () {
             Route::post('/{id}/clear-suspicious', [AdminWalletController::class, 'clearSuspicious']);
             Route::post('/bulk-freeze', [AdminWalletController::class, 'bulkFreeze']);
             Route::post('/bulk-unfreeze', [AdminWalletController::class, 'bulkUnfreeze']);
+        });
+
+
+         // Funding Request Management
+        Route::prefix('funding-requests')->name('funding.')->group(function () {
+            Route::get('/', [AdminFundingController::class, 'index'])->name('index');
+            Route::get('/pending', [AdminFundingController::class, 'pending'])->name('pending');
+            Route::get('/{id}', [AdminFundingController::class, 'show'])->name('show');
+            Route::post('/{id}/confirm', [AdminFundingController::class, 'confirm'])->name('confirm');
+            Route::post('/{id}/reject', [AdminFundingController::class, 'reject'])->name('reject');
+            Route::get('/statistics/overview', [AdminFundingController::class, 'statistics'])->name('statistics');
+            Route::post('/bulk/confirm', [AdminFundingController::class, 'bulkConfirm'])->name('bulk.confirm');
+            Route::post('/bulk/reject', [AdminFundingController::class, 'bulkReject'])->name('bulk.reject');
+        });
+        
+        // Settlement Account Management
+        Route::prefix('settlement-accounts')->name('settlement.')->group(function () {
+            Route::get('/', [AdminSettlementAccountController::class, 'index'])->name('index');
+            Route::get('/active', [AdminSettlementAccountController::class, 'active'])->name('active');
+            Route::get('/{id}', [AdminSettlementAccountController::class, 'show'])->name('show');
+            Route::post('/', [AdminSettlementAccountController::class, 'store'])->name('store');
+            Route::put('/{id}', [AdminSettlementAccountController::class, 'update'])->name('update');
+            Route::delete('/{id}', [AdminSettlementAccountController::class, 'destroy'])->name('destroy');
+            Route::post('/{id}/toggle-active', [AdminSettlementAccountController::class, 'toggleActive'])->name('toggle-active');
+            Route::post('/{id}/reset-daily', [AdminSettlementAccountController::class, 'resetDailyTotal'])->name('reset-daily');
+            Route::get('/{id}/statistics', [AdminSettlementAccountController::class, 'statistics'])->name('statistics');
         });
 
 

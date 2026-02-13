@@ -17,7 +17,6 @@ use Illuminate\Support\Str;
 
 class StockService
 {
-
     public function __construct(
         private TopupboxService $topupbox,
         private NotificationService $notificationService
@@ -39,117 +38,124 @@ class StockService
         return $this->buyStock($user, $network, 'data', $amount);
     }
 
-   /**
- * Core stock purchase logic
- */
-private function buyStock(User $user, string $network, string $type, float $amount): array
-{
-    $network = strtolower($network);
-    $wallet = $user->wallet;
+    /**
+     * Core stock purchase logic
+     */
+    private function buyStock(User $user, string $network, string $type, float $amount): array
+    {
+        $network = strtolower($network);
+        $wallet = $user->wallet;
 
-    if (!in_array($network, ['mtn', 'glo', 'airtel', '9mobile'])) {
-        return [
-            'success' => false,
-            'message' => 'Invalid network. Choose from MTN, Glo, Airtel, or 9mobile',
-        ];
-    }
+        if (!in_array($network, ['mtn', 'glo', 'airtel', '9mobile'])) {
+            return [
+                'success' => false,
+                'message' => 'Invalid network. Choose from MTN, Glo, Airtel, or 9mobile',
+            ];
+        }
 
-    $minAmount = 1000;
-    $maxAmount = 1000000;
-    
-    if ($amount < $minAmount) {
-        return [
-            'success' => false,
-            'message' => "Minimum stock purchase is ₦" . number_format($minAmount),
-        ];
-    }
-
-    if ($amount > $maxAmount) {
-        return [
-            'success' => false,
-            'message' => "Maximum stock purchase is ₦" . number_format($maxAmount),
-        ];
-    }
-
-    if (!$wallet || !$wallet->is_active) {
-        return [
-            'success' => false,
-            'message' => 'No active wallet found. Please create a wallet first.',
-        ];
-    }
-
-
-    $balanceCheck = $this->topupbox->getBalance();
-    
-    if (!$balanceCheck['success']) {
-        Log::warning('Failed to check merchant balance during stock purchase', [
-            'user_id' => $user->id,
-            'amount' => $amount,
-        ]);
+        $minAmount = 1000;
+        $maxAmount = 1000000;
         
-        return [
-            'success' => false,
-            'message' => 'Unable to verify service availability. Please try again.',
-        ];
-    }
+        if ($amount < $minAmount) {
+            return [
+                'success' => false,
+                'message' => "Minimum stock purchase is ₦" . number_format($minAmount),
+            ];
+        }
 
-    $merchantBalance = $balanceCheck['balance'];
-    
-    if ($merchantBalance < $amount) {
-        Log::critical('Insufficient merchant balance for stock purchase', [
+        if ($amount > $maxAmount) {
+            return [
+                'success' => false,
+                'message' => "Maximum stock purchase is ₦" . number_format($maxAmount),
+            ];
+        }
+
+        if (!$wallet || !$wallet->is_active) {
+            return [
+                'success' => false,
+                'message' => 'No active wallet found. Please create a wallet first.',
+            ];
+        }
+
+        if ($wallet->is_frozen) {
+            return [
+                'success' => false,
+                'message' => 'Your wallet is frozen: ' . $wallet->freeze_reason,
+            ];
+        }
+
+        $balanceCheck = $this->topupbox->getBalance();
+        
+        if (!$balanceCheck['success']) {
+            Log::warning('Failed to check merchant balance during stock purchase', [
+                'user_id' => $user->id,
+                'amount' => $amount,
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Unable to verify service availability. Please try again.',
+            ];
+        }
+
+        $merchantBalance = $balanceCheck['balance'];
+        
+        if ($merchantBalance < $amount) {
+            Log::critical('Insufficient merchant balance for stock purchase', [
+                'user_id' => $user->id,
+                'requested_amount' => $amount,
+                'merchant_balance' => $merchantBalance,
+                'shortfall' => $amount - $merchantBalance,
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Service temporarily unavailable. Please contact support.',
+                'error_code' => 'INSUFFICIENT_MERCHANT_BALANCE',
+            ];
+        }
+
+        Log::info('Merchant balance verified for stock purchase', [
             'user_id' => $user->id,
             'requested_amount' => $amount,
             'merchant_balance' => $merchantBalance,
-            'shortfall' => $amount - $merchantBalance,
+            'remaining_after' => $merchantBalance - $amount,
         ]);
-        
-        return [
-            'success' => false,
-            'message' => 'Service temporarily unavailable. Please contact support.',
-            'error_code' => 'INSUFFICIENT_MERCHANT_BALANCE',
-        ];
-    }
 
+        // Calculate discount and cost
+        $discountPercent = $this->getDiscountPercent($user, $network, $type);
+        $cost = $amount - ($amount * $discountPercent / 100);
 
-    Log::info('Merchant balance verified for stock purchase', [
-        'user_id' => $user->id,
-        'requested_amount' => $amount,
-        'merchant_balance' => $merchantBalance,
-        'remaining_after' => $merchantBalance - $amount,
-    ]);
+        if ($wallet->balance < $cost) {
+            return [
+                'success' => false,
+                'message' => 'Insufficient wallet balance',
+                'required' => $cost,
+                'available' => $wallet->balance,
+                'stock_amount' => $amount,
+                'discount' => $discountPercent . '%',
+            ];
+        }
 
-    $discountPercent = $this->getDiscountPercent($user, $network, $type);
-    $cost = $amount - ($amount * $discountPercent / 100);
+        $reference = 'STK' . time() . strtoupper(Str::random(6));
 
-    if ($wallet->account_balance < $cost) {
-        return [
-            'success' => false,
-            'message' => 'Insufficient wallet balance',
-            'required' => $cost,
-            'available' => $wallet->account_balance,
-            'stock_amount' => $amount,
-            'discount' => $discountPercent . '%',
-        ];
-    }
-
-    
-    $reference = 'STK' . time() . strtoupper(Str::random(6));
-
-    return DB::transaction(function () use ($user, $wallet, $network, $type, $amount, $cost, $discountPercent, $reference) {
+        return DB::transaction(function () use ($user, $wallet, $network, $type, $amount, $cost, $discountPercent, $reference) {
             $wallet = Wallet::where('id', $wallet->id)->lockForUpdate()->first();
-            $walletBefore = $wallet->account_balance;
+            $walletBefore = $wallet->balance;
 
             $stock = $user->getOrCreateStock($network, $type);
             $stockBefore = $stock->balance;
 
-           
-            $wallet->decrement('account_balance', $cost);
-            $walletAfter = $wallet->fresh()->account_balance;
+            // Deduct from wallet
+            $wallet->decrement('balance', $cost);
+            $wallet->updateLastActivity();
+            $walletAfter = $wallet->fresh()->balance;
 
+            // Credit stock
             $stock->credit($amount);
             $stockAfter = $stock->fresh()->balance;
 
-            
+            // Create wallet transaction
             WalletTransaction::create([
                 'wallet_id' => $wallet->id,
                 'user_id' => $user->id,
@@ -168,6 +174,7 @@ private function buyStock(User $user, string $network, string $type, float $amou
                 ],
             ]);
 
+            // Create stock purchase record
             $purchase = StockPurchase::create([
                 'user_id' => $user->id,
                 'wallet_id' => $wallet->id,
@@ -195,24 +202,24 @@ private function buyStock(User $user, string $network, string $type, float $amou
                 'cost' => $cost,
             ]);
 
-
-             $this->notificationService->notifyStockPurchase(
-            $user,
-            $network,
-            $type,
-            $amount,
-            $cost
-        );
-
-        if ($stock->balance < 5000) { 
-            $this->notificationService->notifyLowStock(
+            // Send notifications
+            $this->notificationService->notifyStockPurchase(
                 $user,
                 $network,
                 $type,
-                $stock->balance,
-                5000
+                $amount,
+                $cost
             );
-        }
+
+            if ($stock->balance < 5000) { 
+                $this->notificationService->notifyLowStock(
+                    $user,
+                    $network,
+                    $type,
+                    $stock->balance,
+                    5000
+                );
+            }
 
             return [
                 'success' => true,

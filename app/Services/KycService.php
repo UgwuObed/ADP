@@ -6,8 +6,8 @@ use App\Models\KycApplication;
 use App\Models\KycDocument;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class KycService
 {
@@ -38,42 +38,76 @@ class KycService
             throw new \Exception("Document of type '{$documentType}' has already been uploaded. Please delete the existing one first if you want to replace it.");
         }
 
-        $fileName = $this->generateFileName($file, $documentType);
-        $filePath = "kyc/{$application->user_id}/documents/{$fileName}";
-        
-        Storage::disk('s3')->put(
-            $filePath, 
-            file_get_contents($file), 
-            'public'
-        );
-        
-        return KycDocument::create([
-            'kyc_application_id' => $application->id,
-            'document_type' => $documentType,
-            'file_name' => $fileName,
-            'file_url' => Storage::disk('s3')->url($filePath),
-            'file_size' => $file->getSize(),
-            'mime_type' => $file->getMimeType(),
-        ]);
+        try {
+            $publicId = $this->generateCloudinaryPublicId($application, $documentType);
+            
+            $uploadedFile = Cloudinary::upload($file->getRealPath(), [
+                'folder' => "kyc/{$application->user_id}/documents",
+                'public_id' => $publicId,
+                'resource_type' => 'auto',
+                'type' => 'upload',
+            ]);
+            
+            \Log::info('Document uploaded successfully to Cloudinary', [
+                'public_id' => $uploadedFile->getPublicId(),
+                'url' => $uploadedFile->getSecurePath(),
+                'user_id' => $application->user_id,
+                'document_type' => $documentType,
+            ]);
+            
+            return KycDocument::create([
+                'kyc_application_id' => $application->id,
+                'document_type' => $documentType,
+                'file_name' => $file->getClientOriginalName(),
+                'file_url' => $uploadedFile->getSecurePath(),
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+                'cloudinary_public_id' => $uploadedFile->getPublicId(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Cloudinary upload failed', [
+                'error' => $e->getMessage(),
+                'user_id' => $application->user_id,
+                'document_type' => $documentType,
+            ]);
+            throw new \Exception('Failed to upload document: ' . $e->getMessage());
+        }
     }
 
     public function uploadSignature(KycApplication $application, array $data): KycApplication
     {
         if ($data['signature_type'] === 'upload' && isset($data['signature_file'])) {
             $file = $data['signature_file'];
-            $fileName = $this->generateFileName($file, 'signature');
-            $filePath = "kyc/{$application->user_id}/signature/{$fileName}";
             
-            Storage::disk('s3')->put(
-                $filePath,
-                file_get_contents($file),
-                'public'
-            );
-            
-            $application->update([
-                'signature_type' => 'upload',
-                'signature_file_url' => Storage::disk('s3')->url($filePath),
-            ]);
+            try {
+                $publicId = $this->generateCloudinaryPublicId($application, 'signature');
+                
+                $uploadedFile = Cloudinary::upload($file->getRealPath(), [
+                    'folder' => "kyc/{$application->user_id}/signature",
+                    'public_id' => $publicId,
+                    'resource_type' => 'image',
+                    'type' => 'upload',
+                ]);
+                
+                \Log::info('Signature uploaded successfully to Cloudinary', [
+                    'public_id' => $uploadedFile->getPublicId(),
+                    'user_id' => $application->user_id,
+                ]);
+                
+                $application->update([
+                    'signature_type' => 'upload',
+                    'signature_file_url' => $uploadedFile->getSecurePath(),
+                    'cloudinary_signature_id' => $uploadedFile->getPublicId(),
+                ]);
+                
+            } catch (\Exception $e) {
+                \Log::error('Cloudinary signature upload failed', [
+                    'error' => $e->getMessage(),
+                    'user_id' => $application->user_id,
+                ]);
+                throw new \Exception('Failed to upload signature: ' . $e->getMessage());
+            }
         } else {
             $application->update([
                 'signature_type' => 'initials',
@@ -99,14 +133,21 @@ class KycService
     public function deleteDocument(KycDocument $document): bool
     {
         try {
-            $filePath = $this->extractFilePathFromUrl($document->file_url);
-    
-            Storage::disk('s3')->delete($filePath);
+            if (!empty($document->cloudinary_public_id)) {
+                Cloudinary::destroy($document->cloudinary_public_id);
+                \Log::info('Document deleted from Cloudinary', [
+                    'public_id' => $document->cloudinary_public_id
+                ]);
+            }
+            
             $document->delete();
             
             return true;
         } catch (\Exception $e) {
-            \Log::error('Failed to delete document: ' . $e->getMessage());
+            \Log::error('Failed to delete document', [
+                'error' => $e->getMessage(),
+                'document_id' => $document->id
+            ]);
             return false;
         }
     }
@@ -185,12 +226,6 @@ class KycService
         return $status;
     }
 
-    private function extractFilePathFromUrl(string $url): string
-    {
-        $baseUrl = Storage::disk('s3')->url('');
-        return str_replace($baseUrl, '', $url);
-    }
-
     private function calculateProgressPercentage(KycApplication $application): int
     {
         $completedSteps = collect([
@@ -219,13 +254,12 @@ class KycService
         return null; 
     }
 
-    private function generateFileName(UploadedFile $file, string $type): string
+    private function generateCloudinaryPublicId(KycApplication $application, string $type): string
     {
         $timestamp = now()->format('Y-m-d_H-i-s');
         $randomString = Str::random(8);
-        $extension = $file->getClientOriginalExtension();
         
-        return "{$type}_{$timestamp}_{$randomString}.{$extension}";
+        return "{$type}_{$timestamp}_{$randomString}";
     }
 
     public function getDocumentTypes(): array

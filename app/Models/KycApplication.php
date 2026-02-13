@@ -34,6 +34,7 @@ class KycApplication extends Model
         'rejection_reason',
         'verification_response',
         'verification_score',
+        'cloudinary_signature_id',
     ];
 
     protected $casts = [

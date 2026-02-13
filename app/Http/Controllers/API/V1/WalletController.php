@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\API\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Wallet\CreateWalletRequest;
 use App\Http\Resources\WalletResource;
+use App\Http\Resources\WalletFundingRequestResource;
 use App\Services\WalletService;
 use App\Services\AuditLogService;
-use App\Services\VFDService;
+use App\Models\WalletFundingRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -15,60 +15,61 @@ use Illuminate\Support\Facades\Log;
 class WalletController extends Controller
 {
     public function __construct(
-        private WalletService $walletService,
-        private VFDService $vfdService 
+        private WalletService $walletService
     ) {}
 
-    public function create(CreateWalletRequest $request): JsonResponse
+    /**
+     * Create wallet
+     */
+    public function create(Request $request): JsonResponse
     {
         $user = $request->user();
        
         try {
-            $wallet = $this->walletService->createWallet(
-                $user, 
-                $request->validated()
-            );
+            $wallet = $this->walletService->createWallet($user);
 
             AuditLogService::logWalletCreated($user, $wallet);
             
             return response()->json([
+                'success' => true,
                 'message' => 'Wallet created successfully',
                 'wallet' => new WalletResource($wallet)
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
+                'success' => false,
                 'message' => $e->getMessage()
             ], 422);
         }
     }
 
-public function show(Request $request): JsonResponse
-{
-    $user = $request->user();
-    $wallet = $this->walletService->getWallet($user);
+    /**
+     * Get wallet details
+     */
+    public function show(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $wallet = $this->walletService->getWallet($user);
 
-    if (!$wallet) {
+        if (!$wallet) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No wallet found. Please create a wallet to get started.',
+                'has_wallet' => false
+            ], 404);
+        }
+
         return response()->json([
-            'message' => 'No wallet found. Please create a wallet to get started.',
-            'has_wallet' => false
-        ], 200);
+            'success' => true,
+            'wallet' => new WalletResource($wallet),
+            'has_wallet' => true
+        ]);
     }
 
-    $vfdBalance = $this->vfdService->getAccountDetails($wallet->account_number);
-
-    return response()->json([
-        'wallet' => [
-            'id' => $wallet->id,
-            'account_number' => $wallet->account_number,
-            'account_name' => $wallet->account_name,
-            'balance' => $wallet->account_balance,
-        ],
-        'has_wallet' => true
-    ], 200);
-}
-
-
+    /**
+     * Deactivate wallet
+     */
     public function deactivate(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -77,67 +78,123 @@ public function show(Request $request): JsonResponse
 
         if (!$result) {
             return response()->json([
+                'success' => false,
                 'message' => 'No wallet found to deactivate'
             ], 404);
         }
 
-        AuditLogService::logWalletDeactivation($user, $result);
+        AuditLogService::logWalletDeactivation($user, $user->wallet);
 
         return response()->json([
+            'success' => true,
             'message' => 'Wallet deactivated successfully'
         ]);
     }
 
-
-    public function simulateCredit(Request $request): JsonResponse
+    /**
+     * Initiate funding request
+     */
+    public function initiateFunding(Request $request): JsonResponse
     {
-        
-        if (!app()->environment('local', 'testing')) {
-            return response()->json([
-                'message' => 'This endpoint is only available in test environment'
-            ], 403);
-        }
-
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:1|max:1000000',
+            'amount' => 'required|numeric|min:100|max:5000000',
         ]);
 
-        $user = $request->user();
-        $wallet = $user->wallet;
-
-        if (!$wallet) {
-            return response()->json([
-                'message' => 'No wallet found. Please create a wallet first.'
-            ], 404);
-        }
-
-        if (!$wallet->is_active) {
-            return response()->json([
-                'message' => 'Wallet is not active'
-            ], 422);
-        }
-
-        $result = $this->vfdService->simulateCredit(
-            $wallet->account_number,
+        $result = $this->walletService->initiateFunding(
+            $request->user(),
             $validated['amount']
         );
 
         if (!$result['success']) {
+            return response()->json($result, 422);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Upload proof of payment
+     */
+    public function uploadProof(Request $request, string $reference): JsonResponse
+    {
+        $validated = $request->validate([
+            'proof' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // 5MB max
+        ]);
+
+        $fundingRequest = WalletFundingRequest::where('reference', $reference)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        if (!$fundingRequest->isPending()) {
             return response()->json([
-                'message' => $result['message'],
-                'details' => $result['data']
+                'success' => false,
+                'message' => 'Cannot upload proof for this request',
             ], 422);
         }
 
+        // Store the file
+        $path = $request->file('proof')->store('funding-proofs', 'public');
+
+        $result = $this->walletService->uploadProofOfPayment($fundingRequest, $path);
+
+        return response()->json($result);
+    }
+
+    /**
+     * Get funding history
+     */
+    public function fundingHistory(Request $request): JsonResponse
+    {
+        $filters = $request->only(['status', 'from', 'to', 'per_page']);
+        
+        $history = $this->walletService->getFundingHistory(
+            $request->user(),
+            $filters
+        );
+
         return response()->json([
-            'message' => 'Credit simulation successful. VFD will send webhook notification shortly.',
-            'data' => [
-                'account_number' => $wallet->account_number,
-                'amount' => $validated['amount'],
-                'vfd_response' => $result['data']
-            ]
+            'success' => true,
+            'requests' => WalletFundingRequestResource::collection($history),
+            'pagination' => [
+                'current_page' => $history->currentPage(),
+                'last_page' => $history->lastPage(),
+                'per_page' => $history->perPage(),
+                'total' => $history->total(),
+            ],
         ]);
     }
 
+    /**
+     * Get single funding request details
+     */
+    public function fundingRequestDetails(Request $request, string $reference): JsonResponse
+    {
+        $fundingRequest = WalletFundingRequest::where('reference', $reference)
+            ->where('user_id', $request->user()->id)
+            ->with(['confirmedBy'])
+            ->firstOrFail();
 
+        return response()->json([
+            'success' => true,
+            'request' => new WalletFundingRequestResource($fundingRequest),
+        ]);
+    }
+
+    /**
+     * Cancel pending funding request
+     */
+    public function cancelFundingRequest(Request $request, string $reference): JsonResponse
+    {
+        $fundingRequest = WalletFundingRequest::where('reference', $reference)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $result = $this->walletService->cancelFundingRequest($fundingRequest);
+
+        if (!$result['success']) {
+            return response()->json($result, 422);
+        }
+
+        return response()->json($result);
+    }
 }

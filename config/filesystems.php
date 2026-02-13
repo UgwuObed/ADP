@@ -54,20 +54,12 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
-            'visibility' => 'public',
-            'options' => [
-                'StorageClass' => env('AWS_S3_STORAGE_CLASS', 'STANDARD_IA'), 
-            ],
+            // 'visibility' => 'public',
+            // 'options' => [
+            //     'StorageClass' => env('AWS_S3_STORAGE_CLASS', 'STANDARD_IA'), 
+            // ],
         ],
 
-        'tigris' => [
-            'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_REGION'),
-            'bucket' => env('BUCKET_NAME'),
-            'url' => env('AWS_ENDPOINT_URL_S3'),
-        ],
 
         'cloudinary' => [
             'driver' => 'cloudinary',

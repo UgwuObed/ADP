@@ -17,6 +17,7 @@ class KycDocument extends Model
         'file_url',
         'file_size',
         'mime_type',
+        'cloudinary_public_id',
     ];
 
     public function kycApplication(): BelongsTo

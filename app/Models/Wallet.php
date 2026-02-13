@@ -14,18 +14,8 @@ class Wallet extends Model
 
     protected $fillable = [
         'user_id',
-        'account_number',
-        'account_name',
-        'account_balance',
-        'bank_name',
-        'bank_code',
-        'bvn',
-        'nin',
-        'tier',
-        'daily_limit',
-        'transaction_limit',
+        'balance',
         'is_active',
-        'meta',
         'is_frozen',
         'freeze_reason',
         'frozen_by',
@@ -40,11 +30,8 @@ class Wallet extends Model
     ];
 
     protected $casts = [
-        'daily_limit' => 'decimal:2',
-        'transaction_limit' => 'decimal:2',
-        'account_balance' => 'decimal:2',
+        'balance' => 'decimal:2',
         'is_active' => 'boolean',
-        'meta' => 'array',
         'is_frozen' => 'boolean',
         'has_suspicious_activity' => 'boolean',
         'frozen_at' => 'datetime',
@@ -54,6 +41,9 @@ class Wallet extends Model
         'last_platform_fee_charged' => 'date',
     ];
 
+    /**
+     * Relationships
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -64,12 +54,29 @@ class Wallet extends Model
         return $this->hasOne(WalletSetting::class);
     }
 
-     /**
-     * Relationships
-     */
     public function transactions(): HasMany
     {
-        return $this->hasMany(Transaction::class);
+        return $this->hasMany(WalletTransaction::class);
+    }
+
+    public function feeTransactions(): HasMany
+    {
+        return $this->hasMany(WalletFeeTransaction::class);
+    }
+
+    public function withdrawalRequests(): HasMany
+    {
+        return $this->hasMany(WalletWithdrawalRequest::class);
+    }
+
+    public function fundingRequests(): HasMany
+    {
+        return $this->hasMany(WalletFundingRequest::class);
+    }
+
+    public function frozenBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'frozen_by');
     }
 
     /**
@@ -93,21 +100,9 @@ class Wallet extends Model
             ->latest();
     }
 
-    public function feeTransactions(): HasMany
-    {
-        return $this->hasMany(WalletFeeTransaction::class);
-    }
-
-    public function withdrawalRequests(): HasMany
-    {
-        return $this->hasMany(WalletWithdrawalRequest::class);
-    }
-
-    public function frozenBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'frozen_by');
-    }
-
+    /**
+     * Wallet state checks
+     */
     public function isFrozen(): bool
     {
         return $this->is_frozen;
@@ -138,6 +133,9 @@ class Wallet extends Model
         return $this->settings ?? WalletSetting::getForWallet($this->id);
     }
 
+    /**
+     * Check if wallet can perform withdrawal
+     */
     public function canWithdraw(float $amount): array
     {
         $settings = $this->getSettings();
@@ -161,7 +159,7 @@ class Wallet extends Model
         $fee = $settings->calculateWithdrawalFee($amount);
         $totalRequired = $amount + $fee;
         
-        if ($this->account_balance < $totalRequired) {
+        if ($this->balance < $totalRequired) {
             return ['can' => false, 'reason' => 'Insufficient balance (including fee)'];
         }
 
@@ -209,6 +207,9 @@ class Wallet extends Model
         $this->update(['last_activity_at' => now()]);
     }
 
+    /**
+     * Scopes
+     */
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
