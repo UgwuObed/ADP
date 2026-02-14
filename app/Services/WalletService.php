@@ -85,7 +85,7 @@ class WalletService
     /**
      * Initiate funding request
      */
-    public function initiateFunding(User $user, float $amount): array
+    public function initiateFunding(User $user, float $amount, bool $forceNew = false): array
     {
         $wallet = $user->wallet;
         
@@ -131,15 +131,36 @@ class WalletService
             ->pending()
             ->first();
 
-        if ($pendingRequest) {
+        if ($pendingRequest && !$forceNew) {
+            $hoursRemaining = max(0, (int) $pendingRequest->expires_at->diffInHours(now()));
+            
             return [
                 'success' => false,
-                'message' => 'You already have a pending funding request',
-                'pending_request' => [
+                'message' => 'You already have a pending funding request. You can cancel it and create a new one if you want to fund a different amount.',
+                'has_pending' => true,
+                'data' => [
                     'reference' => $pendingRequest->reference,
-                    'amount' => $pendingRequest->amount,
-                    'expires_at' => $pendingRequest->expires_at,
+                    'amount' => (float) $pendingRequest->amount,
+                    'bank_name' => $pendingRequest->bank_name,
+                    'account_number' => $pendingRequest->bank_account_number,
+                    'account_name' => $pendingRequest->bank_account_name,
+                    'expires_at' => $pendingRequest->expires_at->format('Y-m-d H:i:s'),
+                    'expires_in_hours' => $hoursRemaining,
+                    'instructions' => [
+                        '1. Transfer exactly ₦' . number_format($pendingRequest->amount, 2) . ' to the account above',
+                        '2. Use "' . $pendingRequest->reference . '" as the transfer description/narration',
+                        '3. Upload proof of payment (optional but recommended)',
+                        '4. Wait for admin confirmation (usually within 1-24 hours)',
+                    ],
+                    'important_notes' => [
+                        'The reference must be included in your transfer narration',
+                        'This request expires in ' . $hoursRemaining . ' hours',
+                        'Your wallet will be credited once payment is confirmed by admin',
+                        'You can cancel this request and create a new one if you want to fund a different amount',
+                    ],
                 ],
+                'can_cancel' => true,
+                'cancel_url' => '/api/v1/wallet/funding/' . $pendingRequest->reference . '/cancel',
             ];
         }
 
@@ -195,16 +216,16 @@ class WalletService
                 'message' => 'Funding request created successfully',
                 'data' => [
                     'reference' => $reference,
-                    'amount' => $amount,
+                    'amount' => (float) $amount,
                     'bank_name' => $settlementAccount->bank_name,
                     'account_number' => $settlementAccount->account_number,
                     'account_name' => $settlementAccount->account_name,
-                    'expires_at' => $fundingRequest->expires_at,
+                    'expires_at' => $fundingRequest->expires_at->format('Y-m-d H:i:s'),
                     'expires_in_hours' => 24,
                     'instructions' => [
                         '1. Transfer exactly ₦' . number_format($amount, 2) . ' to the account above',
                         '2. Use "' . $reference . '" as the transfer description/narration',
-                        '3. Wait for admin confirmation',
+                        '3. Wait for admin confirmation (usually within 1-24 hours)',
                     ],
                     'important_notes' => [
                         'The reference must be included in your transfer narration',
@@ -271,6 +292,7 @@ class WalletService
             $balanceBefore = $wallet->balance;
 
             $wallet->increment('balance', $actualAmount);
+
             $wallet->updateLastActivity();
             $balanceAfter = $wallet->fresh()->balance;
             $fundingRequest->update([
@@ -281,7 +303,6 @@ class WalletService
                 'admin_notes' => $notes,
             ]);
 
-            // Create transaction record
             $transaction = WalletTransaction::create([
                 'wallet_id' => $wallet->id,
                 'user_id' => $wallet->user_id,
@@ -320,9 +341,9 @@ class WalletService
                 'message' => 'Funding confirmed successfully',
                 'data' => [
                     'transaction_id' => $transaction->id,
-                    'amount_credited' => $actualAmount,
-                    'new_wallet_balance' => $balanceAfter,
-                    'difference' => $actualAmount - $fundingRequest->amount,
+                    'amount_credited' => (float) $actualAmount,
+                    'new_wallet_balance' => (float) $balanceAfter,
+                    'difference' => (float) ($actualAmount - $fundingRequest->amount),
                 ],
             ];
         });
@@ -417,7 +438,7 @@ class WalletService
 
         return [
             'success' => true,
-            'message' => 'Funding request cancelled',
+            'message' => 'Funding request cancelled successfully. You can now create a new one.',
         ];
     }
 
