@@ -135,7 +135,7 @@ class WalletService
             $hoursRemaining = max(0, (int) $pendingRequest->expires_at->diffInHours(now()));
             
             return [
-                'success' => false,
+                'success' => true,
                 'message' => 'You already have a pending funding request. You can cancel it and create a new one if you want to fund a different amount.',
                 'has_pending' => true,
                 'data' => [
