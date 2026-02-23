@@ -339,6 +339,12 @@ Route::prefix('v1/admin')->group(function () {
             Route::post('/{id}/clear-suspicious', [AdminWalletController::class, 'clearSuspicious']);
             Route::post('/bulk-freeze', [AdminWalletController::class, 'bulkFreeze']);
             Route::post('/bulk-unfreeze', [AdminWalletController::class, 'bulkUnfreeze']);
+            Route::post('/{walletId}/adjustments/initiate', [AdminWalletController::class, 'initiateAdjustment']);
+            Route::post('/adjustments/{adjustmentId}/verify', [AdminWalletController::class, 'verifyAdjustment']);
+            Route::post('/adjustments/{adjustmentId}/resend-otp', [AdminWalletController::class, 'resendAdjustmentOtp']);
+            Route::post('/adjustments/{adjustmentId}/cancel', [AdminWalletController::class, 'cancelAdjustment']);
+            Route::get('/adjustments/history', [AdminWalletController::class, 'adjustmentHistory']);
+            Route::get('/adjustments/statistics', [AdminWalletController::class, 'adjustmentStatistics']);
         });
 
 

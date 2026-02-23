@@ -12,6 +12,7 @@ class NotificationService
     // notification types
     const TYPE_WALLET_CREDIT = 'wallet_credit';
     const TYPE_WALLET_DEBIT = 'wallet_debit';
+    const TYPE_WALLET_ADJUSTMENT = 'wallet_adjustment';
     const TYPE_STOCK_PURCHASE = 'stock_purchase';
     const TYPE_AIRTIME_SALE = 'airtime_sale';
     const TYPE_DATA_SALE = 'data_sale';

@@ -56,8 +56,6 @@ class ZeptoMailService
                 ];
             }
 
-            // Log::info("Email sent successfully to: {$toEmail} using template: {$templateKey}");
-            
             return [
                 'success' => true,
                 'data' => $response->json()
@@ -111,42 +109,41 @@ class ZeptoMailService
     }
 
     public function sendTeamInvitationEmail(string $email, string $inviterName, string $otp, string $token): bool
-{
-    $templateKey = config('services.zeptomail.team_invitation_template_key');
-    
-    $mergeData = [
-        'inviter_name' => $inviterName,
-        'otp_code' => $otp,
-        'invitation_url' => config('app.frontend_url') . '/complete-registration?token=' . $token . '&otp=' . $otp,
-        'expiry_days' => 7,
-        'app_name' => config('app.name'),
-        'current_year' => date('Y'),
-    ];
+    {
+        $templateKey = config('services.zeptomail.team_invitation_template_key');
+        
+        $mergeData = [
+            'inviter_name' => $inviterName,
+            'otp_code' => $otp,
+            'invitation_url' => config('app.frontend_url') . '/complete-registration?token=' . $token . '&otp=' . $otp,
+            'expiry_days' => 7,
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+        ];
 
-    $result = $this->sendEmail($templateKey, $email, 'New Team Member', $mergeData);
-    
-    return $result['success'];
-}
+        $result = $this->sendEmail($templateKey, $email, 'New Team Member', $mergeData);
+        
+        return $result['success'];
+    }
 
-public function sendWelcomeEmail(string $email, string $userName): bool
-{
-    $templateKey = config('services.zeptomail.welcome_template_key');
-    
-    $mergeData = [
-        'user_name' => $userName,
-        'login_url' => config('app.frontend_url') . '/login',
-        'app_name' => config('app.name'),
-        'current_year' => date('Y'),
-        'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
-    ];
+    public function sendWelcomeEmail(string $email, string $userName): bool
+    {
+        $templateKey = config('services.zeptomail.welcome_template_key');
+        
+        $mergeData = [
+            'user_name' => $userName,
+            'login_url' => config('app.frontend_url') . '/login',
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+            'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
+        ];
 
-    $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
-    
-    return $result['success'];
-}
+        $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
+        
+        return $result['success'];
+    }
 
-
-/**
+    /**
      * Send airtime sale notification email
      */
     public function sendAirtimeSaleEmail(
@@ -303,4 +300,67 @@ public function sendWelcomeEmail(string $email, string $userName): bool
         return $result['success'];
     }
 
+    /**
+     * Send wallet adjustment OTP email
+     */
+    public function sendWalletAdjustmentOtp(
+        string $email,
+        string $adminName,
+        string $otp,
+        string $type,
+        float $amount,
+        string $userName,
+        string $reference
+    ): bool {
+        $templateKey = config('services.zeptomail.wallet_adjustment_otp_template_key');
+        
+        $mergeData = [
+            'admin_name' => $adminName,
+            'otp_code' => $otp,
+            'adjustment_type' => ucfirst($type),
+            'amount' => number_format($amount, 2),
+            'user_name' => $userName,
+            'reference' => $reference,
+            'expiry_minutes' => 10,
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+        ];
+
+        $result = $this->sendEmail($templateKey, $email, $adminName, $mergeData);
+        
+        return $result['success'];
+    }
+
+    /**
+     * Send wallet adjustment notification email to user
+     */
+    public function sendWalletAdjustmentNotification(
+        string $email,
+        string $userName,
+        string $type,
+        float $amount,
+        float $newBalance,
+        string $reason,
+        string $reference
+    ): bool {
+        $templateKey = config('services.zeptomail.wallet_adjustment_notification_template_key');
+        
+        $mergeData = [
+            'user_name' => $userName,
+            'adjustment_type' => ucfirst($type),
+            'amount' => number_format($amount, 2),
+            'new_balance' => number_format($newBalance, 2),
+            'reason' => $reason,
+            'reference' => $reference,
+            'transaction_date' => now()->format('M d, Y h:i A'),
+            'wallet_url' => config('app.frontend_url') . '/wallet',
+            'app_name' => config('app.name'),
+            'current_year' => date('Y'),
+            'support_email' => config('services.zeptomail.support_email', 'no-reply@peppa.io'),
+        ];
+
+        $result = $this->sendEmail($templateKey, $email, $userName, $mergeData);
+        
+        return $result['success'];
+    }
 }

@@ -5,15 +5,18 @@ namespace App\Http\Controllers\API\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminWalletResource;
 use App\Http\Resources\WalletSettingResource;
+use App\Http\Resources\AdminWalletAdjustmentResource;
 use App\Models\Wallet;
 use App\Services\AdminWalletService;
+use App\Services\AdminWalletAdjustmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AdminWalletController extends Controller
 {
     public function __construct(
-        private AdminWalletService $walletService
+        private AdminWalletService $walletService,
+        private AdminWalletAdjustmentService $adjustmentService
     ) {}
 
     /**
@@ -372,6 +375,153 @@ class AdminWalletController extends Controller
             'success' => true,
             'message' => 'Bulk unfreeze completed',
             'results' => $results,
+        ]);
+    }
+
+    /**
+     * Initiate balance adjustment (generates OTP)
+     */
+    public function initiateAdjustment(Request $request, int $walletId): JsonResponse
+    {
+        $request->validate([
+            'type' => 'required|in:credit,debit',
+            'amount' => 'required|numeric|min:0.01',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $wallet = Wallet::findOrFail($walletId);
+
+        try {
+            $adjustment = $this->adjustmentService->initiateAdjustment(
+                $wallet,
+                $request->user(),
+                $request->type,
+                $request->amount,
+                $request->reason
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Adjustment initiated. OTP has been sent to your email.',
+                'adjustment' => new AdminWalletAdjustmentResource($adjustment),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Verify OTP and complete adjustment
+     */
+    public function verifyAdjustment(Request $request, int $adjustmentId): JsonResponse
+    {
+        $request->validate([
+            'otp' => 'required|string|size:4',
+        ]);
+
+        $adjustment = \App\Models\WalletBalanceAdjustment::findOrFail($adjustmentId);
+
+        $result = $this->adjustmentService->verifyAndComplete($adjustment, $request->otp);
+
+        if (!$result['success']) {
+            return response()->json($result, 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+            'adjustment' => new AdminWalletAdjustmentResource($result['adjustment']),
+        ]);
+    }
+
+    /**
+     * Resend OTP for adjustment
+     */
+    public function resendAdjustmentOtp(int $adjustmentId): JsonResponse
+    {
+        $adjustment = \App\Models\WalletBalanceAdjustment::findOrFail($adjustmentId);
+
+        $success = $this->adjustmentService->resendOtp($adjustment);
+
+        if (!$success) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot resend OTP for this adjustment',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP has been resent to your email',
+        ]);
+    }
+
+    /**
+     * Cancel adjustment
+     */
+    public function cancelAdjustment(int $adjustmentId): JsonResponse
+    {
+        $adjustment = \App\Models\WalletBalanceAdjustment::findOrFail($adjustmentId);
+
+        $success = $this->adjustmentService->cancelAdjustment($adjustment);
+
+        if (!$success) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot cancel this adjustment',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Adjustment cancelled successfully',
+        ]);
+    }
+
+    /**
+     * Get adjustment history
+     */
+    public function adjustmentHistory(Request $request): JsonResponse
+    {
+        $filters = $request->only([
+            'wallet_id',
+            'admin_id',
+            'type',
+            'status',
+            'from_date',
+            'to_date',
+            'per_page',
+        ]);
+
+        $adjustments = $this->adjustmentService->getAdjustmentHistory($filters);
+
+        return response()->json([
+            'success' => true,
+            'adjustments' => AdminWalletAdjustmentResource::collection($adjustments),
+            'pagination' => [
+                'current_page' => $adjustments->currentPage(),
+                'last_page' => $adjustments->lastPage(),
+                'per_page' => $adjustments->perPage(),
+                'total' => $adjustments->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get adjustment statistics
+     */
+    public function adjustmentStatistics(Request $request): JsonResponse
+    {
+        $period = $request->get('period', 'all');
+        $stats = $this->adjustmentService->getAdjustmentStatistics($period);
+
+        return response()->json([
+            'success' => true,
+            'period' => $period,
+            'statistics' => $stats,
         ]);
     }
 }

@@ -49,6 +49,8 @@ return [
         'stock_purchase_template_key' => env('ZEPTOMAIL_STOCK_PURCHASE_TEMPLATE_KEY'),
         'low_stock_alert_template_key' => env('ZEPTOMAIL_LOW_STOCK_ALERT_TEMPLATE_KEY'),
         'wallet_credit_template_key' => env('ZEPTOMAIL_WALLET_CREDIT_TEMPLATE_KEY'),
+        'wallet_adjustment_otp_template_key' => env('ZEPTOMAIL_WALLET_ADJUSTMENT_OTP_TEMPLATE'),
+        'wallet_adjustment_notification_template_key' => env('ZEPTOMAIL_WALLET_ADJUSTMENT_NOTIFICATION_TEMPLATE'),
     ],
 
     // 'vfd' => [
