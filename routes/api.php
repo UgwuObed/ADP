@@ -255,13 +255,15 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::prefix('api-credentials')->group(function () {
-            Route::get('/',        [ApiCredentialController::class, 'index']);
-            Route::post('/',       [ApiCredentialController::class, 'store']);
-            Route::post('/{id}/revoke', [ApiCredentialController::class, 'revoke']);
-            Route::get('/{id}/usage', [ApiCredentialController::class, 'usage']);
-            Route::delete('/{id}', [ApiCredentialController::class, 'destroy']);
+            Route::get('/',                          [ApiCredentialController::class, 'index']);
+            Route::post('/',                         [ApiCredentialController::class, 'store']);
+            Route::get('/stocks',                    [ApiCredentialController::class, 'allCredentialStocks']);
+            Route::post('/{id}/revoke',              [ApiCredentialController::class, 'revoke']);
+            Route::delete('/{id}',                   [ApiCredentialController::class, 'destroy']);
+            Route::get('/{id}/stocks',               [ApiCredentialController::class, 'credentialStocks']);
+            Route::post('/{id}/stocks/allocate',     [ApiCredentialController::class, 'allocateStock']);
+            Route::get('/{id}/usage',                [ApiCredentialController::class, 'usage']);
         });
-
     });
 });
 

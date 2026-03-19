@@ -4,6 +4,9 @@ namespace App\Http\Controllers\API\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiCredential;
+use App\Models\ApiCredentialStock;
+use App\Models\DistributorStock;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -61,19 +64,65 @@ class ApiCredentialController extends Controller
         ], 201);
     }
 
-    public function revoke(Request $request, int $id): JsonResponse
-    {
-        $credential = $request->user()->apiCredentials()->findOrFail($id);
+public function revoke(Request $request, int $id): JsonResponse
+{
+    $credential = $request->user()->apiCredentials()->findOrFail($id);
+
+    DB::transaction(function () use ($credential, $request) {
+        $credentialStocks = ApiCredentialStock::where('api_credential_id', $credential->id)
+            ->where('balance', '>', 0)
+            ->get();
+
+        foreach ($credentialStocks as $credStock) {
+            $distributorStock = DistributorStock::where('user_id', $request->user()->id)
+                ->where('network', $credStock->network)
+                ->where('type', $credStock->type)
+                ->first();
+
+            if ($distributorStock) {
+                $distributorStock->increment('balance', $credStock->balance);
+            }
+
+            $credStock->update(['balance' => 0]);
+        }
+
         $credential->update(['is_active' => false]);
+    });
 
-        return response()->json(['success' => true, 'message' => 'API key revoked.']);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'API key revoked and remaining stock returned to your balance.',
+    ]);
+}
 
-    public function destroy(Request $request, int $id): JsonResponse
-    {
-        $request->user()->apiCredentials()->findOrFail($id)->delete();
-        return response()->json(['success' => true, 'message' => 'API key deleted.']);
-    }
+public function destroy(Request $request, int $id): JsonResponse
+{
+    $credential = $request->user()->apiCredentials()->findOrFail($id);
+
+    DB::transaction(function () use ($credential, $request) {
+        $credentialStocks = ApiCredentialStock::where('api_credential_id', $credential->id)
+            ->where('balance', '>', 0)
+            ->get();
+
+        foreach ($credentialStocks as $credStock) {
+            $distributorStock = DistributorStock::where('user_id', $request->user()->id)
+                ->where('network', $credStock->network)
+                ->where('type', $credStock->type)
+                ->first();
+
+            if ($distributorStock) {
+                $distributorStock->increment('balance', $credStock->balance);
+            }
+        }
+
+        $credential->delete();
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'API key deleted and remaining stock returned to your balance.',
+    ]);
+}
 
     public function usage(Request $request, int $id): JsonResponse
 {
@@ -120,6 +169,143 @@ class ApiCredentialController extends Controller
             'per_page'     => $logs->perPage(),
             'total'        => $logs->total(),
         ],
+    ]);
+}
+
+
+/**
+ * Allocate stock to a credential (or top up existing)
+ */
+public function allocateStock(Request $request, int $id): JsonResponse
+{
+    $request->validate([
+        'network' => ['required', 'string', 'in:mtn,glo,airtel,9mobile'],
+        'type'    => ['required', 'string', 'in:airtime,data'],
+        'amount'  => ['required', 'numeric', 'min:100'],
+    ]);
+
+    $credential = $request->user()->apiCredentials()->findOrFail($id);
+
+    $network = strtolower($request->network);
+    $type    = $request->type;
+    $amount  = (float) $request->amount;
+
+    $distributorStock = DistributorStock::where('user_id', $request->user()->id)
+        ->where('network', $network)
+        ->where('type', $type)
+        ->first();
+
+    if (!$distributorStock || $distributorStock->balance < $amount) {
+        $available = $distributorStock?->balance ?? 0;
+        return response()->json([
+            'success'   => false,
+            'message'   => 'Insufficient ' . strtoupper($network) . ' stock to allocate',
+            'required'  => $amount,
+            'available' => $available,
+            'shortfall' => $amount - $available,
+        ], 422);
+    }
+
+    return DB::transaction(function () use ($credential, $distributorStock, $network, $type, $amount, $request) {
+        $distributorStock = DistributorStock::where('id', $distributorStock->id)
+            ->lockForUpdate()->first();
+
+        if ($distributorStock->balance < $amount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient stock (concurrent transaction)',
+            ], 422);
+        }
+
+        $distributorStock->decrement('balance', $amount);
+
+        $credentialStock = ApiCredentialStock::firstOrCreate(
+            [
+                'api_credential_id' => $credential->id,
+                'network'           => $network,
+                'type'              => $type,
+            ],
+            [
+                'user_id'         => $request->user()->id,
+                'balance'         => 0,
+                'total_allocated' => 0,
+                'total_sold'      => 0,
+            ]
+        );
+
+        $credentialStock->increment('balance', $amount);
+        $credentialStock->increment('total_allocated', $amount);
+
+        return response()->json([
+            'success'            => true,
+            'message'            => '₦' . number_format($amount) . ' ' . strtoupper($network) . ' ' . $type . ' allocated successfully',
+            'credential_id'      => $credential->id,
+            'label'              => $credential->label,
+            'network'            => strtoupper($network),
+            'type'               => $type,
+            'amount_allocated'   => $amount,
+            'new_balance'        => (float) $credentialStock->fresh()->balance,
+            'distributor_stock_remaining' => (float) $distributorStock->fresh()->balance,
+        ]);
+    });
+}
+
+/**
+ * View stock balances for a specific credential
+ */
+public function credentialStocks(Request $request, int $id): JsonResponse
+{
+    $credential = $request->user()->apiCredentials()->findOrFail($id);
+
+    $stocks = ApiCredentialStock::where('api_credential_id', $credential->id)
+        ->get()
+        ->map(fn($stock) => [
+            'network'         => strtoupper($stock->network),
+            'type'            => $stock->type,
+            'balance'         => (float) $stock->balance,
+            'total_allocated' => (float) $stock->total_allocated,
+            'total_sold'      => (float) $stock->total_sold,
+        ]);
+
+    return response()->json([
+        'success'    => true,
+        'credential' => [
+            'id'          => $credential->id,
+            'label'       => $credential->label,
+            'is_active'   => $credential->is_active,
+            'last_used_at' => $credential->last_used_at?->toIso8601String(),
+        ],
+        'stocks' => $stocks,
+    ]);
+}
+
+/**
+ * View stocks across ALL credentials for this distributor
+ */
+public function allCredentialStocks(Request $request): JsonResponse
+{
+    $credentials = $request->user()
+        ->apiCredentials()
+        ->with('stocks')
+        ->get()
+        ->map(fn($credential) => [
+            'id'          => $credential->id,
+            'label'       => $credential->label,
+            'api_key'     => $credential->api_key,
+            'is_active'   => $credential->is_active,
+            'last_used_at' => $credential->last_used_at?->toIso8601String(),
+            'stocks'      => $credential->stocks->map(fn($stock) => [
+                'network'         => strtoupper($stock->network),
+                'type'            => $stock->type,
+                'balance'         => (float) $stock->balance,
+                'total_allocated' => (float) $stock->total_allocated,
+                'total_sold'      => (float) $stock->total_sold,
+            ]),
+        ]);
+
+    return response()->json([
+        'success'     => true,
+        'credentials' => $credentials,
     ]);
 }
 

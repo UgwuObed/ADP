@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ApiCredential extends Model
 {
@@ -41,6 +42,11 @@ class ApiCredential extends Model
     {
         if (empty($this->allowed_ips)) return true;
         return in_array($ip, $this->allowed_ips);
+    }
+
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(ApiCredentialStock::class);
     }
 }
 
