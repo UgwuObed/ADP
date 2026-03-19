@@ -40,6 +40,10 @@ use App\Http\Controllers\API\V1\Admin\AdminTopupboxController;
 use App\Http\Controllers\API\V1\Admin\PlatformAdminController;
 use App\Http\Controllers\API\V1\Admin\AdminSettlementAccountController;
 use App\Http\Controllers\API\V1\Admin\AdminFundingController;
+use App\Http\Controllers\API\V1\Public\PublicSalesController;
+use App\Http\Controllers\API\V1\Public\PublicUsageController;
+use App\Http\Controllers\API\V1\ApiCredentialController;
+
 
 
 
@@ -53,6 +57,18 @@ Route::group(['prefix' => '/oauth'], function () {
     Route::post('authorize', [AuthorizationController::class, 'authorize']);
     Route::post('refresh', [AccessTokenController::class, 'refresh']);
     Route::post('revoke', [AccessTokenController::class, 'revoke']);
+});
+
+Route::prefix('v1/public')->group(function () {
+
+    Route::middleware('api.key:airtime')->post('sell/airtime', [PublicSalesController::class, 'sellAirtime']);
+    Route::middleware('api.key:data')->post('sell/data', [PublicSalesController::class, 'sellData']);
+
+    Route::middleware('api.key')->group(function () {
+        Route::get('transactions', [PublicUsageController::class, 'transactions']);
+        Route::get('transactions/{reference}', [PublicUsageController::class, 'transaction']);
+        Route::get('stats', [PublicUsageController::class, 'stats']);
+    });
 });
 
 Route::prefix('v1')->group(function () {
@@ -236,6 +252,14 @@ Route::prefix('v1')->group(function () {
 
         Route::prefix('utils')->group(function () {
             Route::get('/nigerian-states', [UtilityController::class, 'nigerianStates']);
+        });
+
+        Route::prefix('api-credentials')->group(function () {
+            Route::get('/',        [ApiCredentialController::class, 'index']);
+            Route::post('/',       [ApiCredentialController::class, 'store']);
+            Route::post('/{id}/revoke', [ApiCredentialController::class, 'revoke']);
+            Route::get('/{id}/usage', [ApiCredentialController::class, 'usage']);
+            Route::delete('/{id}', [ApiCredentialController::class, 'destroy']);
         });
 
     });

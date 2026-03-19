@@ -80,5 +80,6 @@ class Kernel extends HttpKernel
         'super_admin' => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
         'admin' => \App\Http\Middleware\AdminAuthorization::class,
         'super_admin' => \App\Http\Middleware\SuperAdminAuthorization::class,
+        'api.key' => \App\Http\Middleware\ApiKeyAuthenticate::class,
     ];
 }

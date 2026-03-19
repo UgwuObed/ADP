@@ -306,4 +306,9 @@ public function unreadNotifications(): HasMany
     return $this->notifications()->where('is_read', false);
 }
 
+public function apiCredentials(): HasMany
+{
+    return $this->hasMany(ApiCredential::class);
+}
+
 }
