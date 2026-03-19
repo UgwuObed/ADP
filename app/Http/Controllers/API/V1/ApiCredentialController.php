@@ -36,13 +36,13 @@ class ApiCredentialController extends Controller
             'rate_limit'  => ['nullable', 'integer', 'min:1', 'max:1000'],
         ]);
 
-        $activeCount = $request->user()->apiCredentials()->where('is_active', true)->count();
-        if ($activeCount >= 5) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Maximum of 5 active API keys allowed.',
-            ], 422);
-        }
+        // $activeCount = $request->user()->apiCredentials()->where('is_active', true)->count();
+        // if ($activeCount >= 5) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Maximum of 5 active API keys allowed.',
+        //     ], 422);
+        // }
 
         $rawSecret = Str::random(64);
 
