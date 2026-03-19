@@ -65,6 +65,7 @@ Route::prefix('v1/public')->group(function () {
     Route::middleware('api.key:data')->post('sell/data', [PublicSalesController::class, 'sellData']);
 
     Route::middleware('api.key')->group(function () {
+        Route::get('balance', [PublicUsageController::class, 'balance']);
         Route::get('transactions', [PublicUsageController::class, 'transactions']);
         Route::get('transactions/{reference}', [PublicUsageController::class, 'transaction']);
         Route::get('stats', [PublicUsageController::class, 'stats']);

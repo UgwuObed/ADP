@@ -126,4 +126,24 @@ class PublicUsageController extends Controller
         ],
     ]);
  }
+
+ public function balance(Request $request): JsonResponse
+{
+    $credential = $request->get('_api_credential');
+
+    $stocks = ApiCredentialStock::where('api_credential_id', $credential->id)
+        ->get()
+        ->map(fn($stock) => [
+            'network'   => strtoupper($stock->network),
+            'type'      => $stock->type,
+            'balance'   => (float) $stock->balance,
+            'total_sold' => (float) $stock->total_sold,
+        ]);
+
+    return response()->json([
+        'success' => true,
+        'stocks'  => $stocks,
+    ]);
+}
+
 }
