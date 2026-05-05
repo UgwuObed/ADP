@@ -67,6 +67,7 @@ Route::prefix('v1/public')->group(function () {
     Route::middleware('api.key')->group(function () {
         Route::get('balance', [PublicUsageController::class, 'balance']);
         Route::get('transactions', [PublicUsageController::class, 'transactions']);
+        Route::get('transactions/export/csv', [PublicUsageController::class, 'exportTransactions']);
         Route::get('transactions/{reference}', [PublicUsageController::class, 'transaction']);
         Route::get('stats', [PublicUsageController::class, 'stats']);
     });
@@ -455,12 +456,6 @@ Route::prefix('v1/admin')->group(function () {
 
  
     Route::middleware(['auth:api', 'super_admin'])->group(function () {
-        // Settings
-        Route::prefix('settings')->group(function () {
-            Route::get('commission', [AdminSettingsController::class, 'getCommission']);
-            Route::put('commission', [AdminSettingsController::class, 'updateCommission']);
-        });
-
         // Route::prefix('kyc')->group(function () {
            
         // });
