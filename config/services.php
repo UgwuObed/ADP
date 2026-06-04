@@ -76,5 +76,21 @@ return [
         'secret' => env('TOPUPBOX_SECRET'),
     ],
 
+    'airtime' => [
+        'provider' => env('AIRTIME_PROVIDER', 'topupbox'),
+        'require_merchant_balance_check' => env('AIRTIME_REQUIRE_MERCHANT_BALANCE_CHECK', env('AIRTIME_PROVIDER', 'topupbox') === 'topupbox'),
+    ],
+
+    'mtn_hostif' => [
+        'base_url' => env('MTN_HOSTIF_BASE_URL', 'https://197.210.3.215:8915/axis2/services/HostIFService'),
+        'username' => env('MTN_HOSTIF_USERNAME'),
+        'password' => env('MTN_HOSTIF_PASSWORD'),
+        'orig_msisdn' => env('MTN_HOSTIF_ORIG_MSISDN'),
+        'timeout' => env('MTN_HOSTIF_TIMEOUT', 30),
+        'verify_ssl' => env('MTN_HOSTIF_VERIFY_SSL', true),
+        'dest_msisdn_format' => env('MTN_HOSTIF_DEST_MSISDN_FORMAT', 'international'),
+        'xml_namespace' => env('MTN_HOSTIF_XML_NAMESPACE', 'http://hostif.ers.mtn.com/xsd'),
+    ],
+
 
 ];

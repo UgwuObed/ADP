@@ -9,7 +9,6 @@ use App\Models\StockPurchase;
 use App\Models\WalletTransaction;
 use App\Models\CommissionSetting;
 use App\Services\AuditLogService;
-use App\Services\TopupboxService;
 use App\Services\NotificationService; 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +17,7 @@ use Illuminate\Support\Str;
 class StockService
 {
     public function __construct(
-        private TopupboxService $topupbox,
+        private AirtimeProviderManager $airtimeProvider,
         private NotificationService $notificationService
     ) {}
 
@@ -84,43 +83,45 @@ class StockService
             ];
         }
 
-        $balanceCheck = $this->topupbox->getBalance();
-        
-        if (!$balanceCheck['success']) {
-            Log::warning('Failed to check merchant balance during stock purchase', [
-                'user_id' => $user->id,
-                'amount' => $amount,
-            ]);
-            
-            return [
-                'success' => false,
-                'message' => 'Unable to verify service availability. Please try again.',
-            ];
-        }
+        if ($this->airtimeProvider->requiresMerchantBalanceCheck()) {
+            $balanceCheck = $this->airtimeProvider->getBalance();
 
-        $merchantBalance = $balanceCheck['balance'];
-        
-        if ($merchantBalance < $amount) {
-            Log::critical('Insufficient merchant balance for stock purchase', [
+            if (!$balanceCheck['success']) {
+                Log::warning('Failed to check merchant balance during stock purchase', [
+                    'user_id' => $user->id,
+                    'amount' => $amount,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Unable to verify service availability. Please try again.',
+                ];
+            }
+
+            $merchantBalance = $balanceCheck['balance'];
+
+            if ($merchantBalance < $amount) {
+                Log::critical('Insufficient merchant balance for stock purchase', [
+                    'user_id' => $user->id,
+                    'requested_amount' => $amount,
+                    'merchant_balance' => $merchantBalance,
+                    'shortfall' => $amount - $merchantBalance,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Service temporarily unavailable. Please contact support.',
+                    'error_code' => 'INSUFFICIENT_MERCHANT_BALANCE',
+                ];
+            }
+
+            Log::info('Merchant balance verified for stock purchase', [
                 'user_id' => $user->id,
                 'requested_amount' => $amount,
                 'merchant_balance' => $merchantBalance,
-                'shortfall' => $amount - $merchantBalance,
+                'remaining_after' => $merchantBalance - $amount,
             ]);
-            
-            return [
-                'success' => false,
-                'message' => 'Service temporarily unavailable. Please contact support.',
-                'error_code' => 'INSUFFICIENT_MERCHANT_BALANCE',
-            ];
         }
-
-        Log::info('Merchant balance verified for stock purchase', [
-            'user_id' => $user->id,
-            'requested_amount' => $amount,
-            'merchant_balance' => $merchantBalance,
-            'remaining_after' => $merchantBalance - $amount,
-        ]);
 
         // Calculate discount and cost
         $discountPercent = $this->getDiscountPercent($user, $network, $type);

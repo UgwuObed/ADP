@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 class VtuService
 {
     public function __construct(
-        private TopupboxService $topupbox
+        private AirtimeProviderManager $airtimeProvider
     ) {}
 
     /**
@@ -39,7 +39,7 @@ class VtuService
             'network' => $network,
             'profit' => $amount - $costPrice,
         ], function ($reference) use ($phone, $amount, $network) {
-            return $this->topupbox->purchaseAirtime($phone, $amount, $network);
+            return $this->airtimeProvider->purchaseAirtime($phone, $amount, $network);
         });
     }
 
@@ -75,12 +75,11 @@ class VtuService
                 'validity' => $plan->validity,
             ],
         ], function ($reference) use ($phone, $amount, $network, $plan) {
-            return $this->topupbox->purchaseData(
+            return $this->airtimeProvider->purchaseData(
                 $phone,
                 $amount,
                 $network,
-                $plan->data_code,
-                $plan->plan_type
+                $plan->data_code
             );
         });
     }

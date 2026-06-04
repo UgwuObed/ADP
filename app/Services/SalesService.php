@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
 class SalesService
 {
     public function __construct(
-        private TopupboxService $topupbox,
+        private AirtimeProviderManager $airtimeProvider,
         private NotificationService $notificationService
     ) {}
 
@@ -109,7 +109,7 @@ class SalesService
                 'status'               => 'pending',
             ]);
 
-            $apiResult = $this->topupbox->purchaseAirtime($phone, $amount, $network);
+            $apiResult = $this->airtimeProvider->purchaseAirtime($phone, $amount, $network);
 
             if ($apiResult['success']) {
                 $sale->update([
@@ -235,7 +235,7 @@ class SalesService
                 ],
             ]);
 
-            $apiResult = $this->topupbox->purchaseData(
+            $apiResult = $this->airtimeProvider->purchaseData(
                 $phone, $amount, $network, $plan->data_code
             );
 
