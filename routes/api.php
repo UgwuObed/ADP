@@ -70,6 +70,7 @@ Route::prefix('v1/public')->group(function () {
         Route::get('transactions/export/csv', [PublicUsageController::class, 'exportTransactions']);
         Route::get('transactions/{reference}', [PublicUsageController::class, 'transaction']);
         Route::get('stats', [PublicUsageController::class, 'stats']);
+        Route::get('networks/{code}/plans', [NetworkController::class, 'dataPlans']);
     });
 });
 
