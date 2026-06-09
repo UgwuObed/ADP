@@ -125,6 +125,7 @@ class MtnHostIfService
                 ->send('POST', $this->baseUrl, ['body' => $payload]);
 
             $parsed = $this->parseXmlResponse($response->body());
+            Log::debug('MTN HostIF Parsed Response', ['parsed' => $parsed]);
             $responseCode = (int) ($parsed['responseCode'] ?? -1);
             $statusId = (int) ($parsed['statusId'] ?? -1);
             $success = $response->successful() && $responseCode === 0 && $statusId === 0;
@@ -196,33 +197,36 @@ class MtnHostIfService
 XML;
     }
 
-    private function parseXmlResponse(string $body): array
-    {
-        $previous = libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($body);
-        libxml_use_internal_errors($previous);
+ private function parseXmlResponse(string $body): array
+{
+    $previous = libxml_use_internal_errors(true);
+    $xml = simplexml_load_string($body);
+    libxml_use_internal_errors($previous);
 
-        if (!$xml) {
-            return ['raw' => $body];
-        }
+    if (!$xml) {
+        return ['raw' => $body];
+    }
 
-        $result = [];
-        foreach ($xml->xpath('//*[local-name()="vendResponse"]/*') ?: [] as $node) {
+    $result = [];
+    $nodes = $xml->xpath('//*[local-name()="vendResponse"]/*') ?: [];
+
+    foreach ($nodes as $node) {
+        $localName = $node->getName();
+        $result[$localName] = (string) $node;
+    }
+
+    if (!empty($result)) {
+        return $result;
+    }
+
+    foreach ($xml->xpath('//*') ?: [] as $node) {
+        if (count($node->children()) === 0) {
             $result[$node->getName()] = (string) $node;
         }
-
-        if ($result !== []) {
-            return $result;
-        }
-
-        foreach ($xml->xpath('//*[local-name()="Body"]//*') ?: [] as $node) {
-                if (count($node->children()) === 0) {
-                $result[$node->getName()] = (string) $node;
-            }
-        }
-
-        return $result ?: ['raw' => $body];
     }
+
+    return $result ?: ['raw' => $body];
+}
 
     private function responseMessage(array $parsed, int $responseCode): string
     {
