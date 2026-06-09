@@ -199,6 +199,9 @@ XML;
 
  private function parseXmlResponse(string $body): array
 {
+    $body = preg_replace('/(<\/?)(\w+):([^>]*>)/', '$1$3', $body);
+    $body = preg_replace('/xmlns[^"]*"[^"]*"/', '', $body);
+
     $previous = libxml_use_internal_errors(true);
     $xml = simplexml_load_string($body);
     libxml_use_internal_errors($previous);
@@ -211,8 +214,7 @@ XML;
     $nodes = $xml->xpath('//*[local-name()="vendResponse"]/*') ?: [];
 
     foreach ($nodes as $node) {
-        $localName = $node->getName();
-        $result[$localName] = (string) $node;
+        $result[$node->getName()] = (string) $node;
     }
 
     if (!empty($result)) {
